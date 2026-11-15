@@ -10,8 +10,7 @@ depends=('omarchy>=4.5' 'hyprland>=0.55' 'jq' 'libnotify' 'gcc-libs' 'glibc')
 makedepends=('cargo')
 install=ymux.install
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-# replace with the real checksum (updpkgsums) once the v0.1.0 tag is published
-sha256sums=('SKIP')
+sha256sums=('04130ab2a5075eaa8ef389ac539e98732a812a968c2d0f71461a87ff77865dc2')
 
 prepare() {
   cd "$pkgname-$pkgver"

@@ -1,0 +1,20 @@
+pkgbase = ymux
+	pkgdesc = omarchymux: tmux-style sessions, workspaces and tiles for the Omarchy desktop
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/synju/ymux
+	install = ymux.install
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = cargo
+	depends = omarchy>=4.5
+	depends = hyprland>=0.55
+	depends = jq
+	depends = libnotify
+	depends = gcc-libs
+	depends = glibc
+	source = ymux-0.1.0.tar.gz::https://github.com/synju/ymux/archive/refs/tags/v0.1.0.tar.gz
+	sha256sums = 04130ab2a5075eaa8ef389ac539e98732a812a968c2d0f71461a87ff77865dc2
+
+pkgname = ymux
