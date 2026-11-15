@@ -20,6 +20,7 @@ fn leader_key(key: &str) -> String {
         // physical keycodes: with Shift held the keysym is `dollar` / `colon`
         "$" => "SHIFT + code:13".into(),
         ":" => "SHIFT + code:47".into(),
+        "?" => "SHIFT + code:61".into(),
         "," => "comma".into(),
         "." => "period".into(),
         "/" => "slash".into(),
@@ -328,5 +329,10 @@ mod tests {
     #[test]
     fn no_em_dash() {
         assert!(!lua().contains('\u{2014}'));
+    }
+
+    #[test]
+    fn question_mark_is_shift_slash_by_keycode() {
+        assert_eq!(leader_key("?"), "SHIFT + code:61");
     }
 }

@@ -21,6 +21,7 @@ pub const PLUGIN_FILES: &[(&str, &str)] = &[
     ("views/Prompt.qml", include_str!("../plugin/synju.ymux/views/Prompt.qml")),
     ("views/Tree.qml", include_str!("../plugin/synju.ymux/views/Tree.qml")),
     ("views/Options.qml", include_str!("../plugin/synju.ymux/views/Options.qml")),
+    ("views/Help.qml", include_str!("../plugin/synju.ymux/views/Help.qml")),
     ("views/Panes.qml", include_str!("../plugin/synju.ymux/views/Panes.qml")),
 ];
 const PLUGIN_ID: &str = "synju.ymux";

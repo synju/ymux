@@ -86,6 +86,26 @@ function promptTitle(payload) {
 // Flattened rows: monitor > session > workspace > tile, children of a collapsed
 // key omitted. `current` marks the focused monitor, active session, shown workspace
 // and focused tile.
+// A scrollbar handle for a list showing `ratio` of its content from `pos` (both
+// 0-1, as ListView.visibleArea gives them): at least 24 px, kept inside the track.
+function scrollThumb(pos, ratio, track) {
+  var h = Math.max(24, Math.round(ratio * track))
+  var y = Math.min(track - h, Math.round(pos * track))
+  return { y: Math.max(0, y), height: h, visible: ratio < 1 }
+}
+
+// Leader + ?: the help groups as list rows, a header row before each group.
+function helpRows(payload) {
+  var rows = []
+  var groups = (payload && payload.groups) || []
+  for (var i = 0; i < groups.length; i++) {
+    rows.push({ header: groups[i].title })
+    var r = groups[i].rows || []
+    for (var j = 0; j < r.length; j++) rows.push({ keys: r[j][0], text: r[j][1] })
+  }
+  return rows
+}
+
 // `r` in the tree: the rename prompt for any row (user request 2026-11-15).
 function renamePayload(row) {
   var id = row.kind === "monitor" ? row.description : row.kind === "tile" ? row.address : row.id

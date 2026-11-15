@@ -18,10 +18,11 @@ pub enum Action {
     PreviousWorkspace,
     NextWorkspace,
     MoveWorkspace,
+    Help,
 }
 
 impl Action {
-    pub const ALL: [Action; 13] = [
+    pub const ALL: [Action; 14] = [
         Action::NewWorkspace,
         Action::CommandPrompt,
         Action::RenameSession,
@@ -35,6 +36,7 @@ impl Action {
         Action::PreviousWorkspace,
         Action::NextWorkspace,
         Action::MoveWorkspace,
+        Action::Help,
     ];
 
     pub fn name(&self) -> &'static str {
@@ -52,6 +54,7 @@ impl Action {
             Action::PreviousWorkspace => "previous-workspace",
             Action::NextWorkspace => "next-workspace",
             Action::MoveWorkspace => "move-workspace",
+            Action::Help => "help",
         }
     }
 
@@ -86,6 +89,7 @@ impl Default for Config {
             ("v", Action::Swap),
             ("x", Action::KillTile),
             (".", Action::MoveWorkspace),
+            ("?", Action::Help),
         ];
         Config {
             leader: "SUPER+B".into(),
@@ -146,7 +150,7 @@ pub fn parse(text: &str) -> (Config, Vec<(usize, String)>) {
 
 /// One key: an ASCII letter or digit, one supported symbol, or an xkb key name.
 fn valid_key(k: &str) -> bool {
-    const SYMBOLS: &str = "$:,./;'-=[]\\`";
+    const SYMBOLS: &str = "$:?,./;'-=[]\\`";
     (k.chars().count() == 1 && (k.chars().all(|c| c.is_ascii_alphanumeric()) || SYMBOLS.contains(k)))
         || (!k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
 }
@@ -320,5 +324,12 @@ mod tests {
         for a in Action::ALL {
             assert_eq!(Action::from_name(a.name()), Some(a));
         }
+    }
+
+    #[test]
+    fn question_mark_opens_help_by_default() {
+        let c = Config::default();
+        assert!(c.binds.iter().any(|(k, a)| k == "?" && *a == Action::Help));
+        assert_eq!(Action::from_name("help"), Some(Action::Help));
     }
 }

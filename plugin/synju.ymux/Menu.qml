@@ -23,7 +23,7 @@ Item {
   function open(payloadJson) {
     root.payload = Ymux.parsePayload(payloadJson)
     var v = root.payload.view
-    root.opened = Ymux.opensPrompt(root.payload) || v === "tree" || v === "options" || v === "panes"
+    root.opened = Ymux.opensPrompt(root.payload) || v === "tree" || v === "options" || v === "panes" || v === "help"
   }
 
   function close() {
@@ -67,6 +67,14 @@ Item {
       folded: (root.service && root.service.view) ? root.service.view.folded : []
       onRenameRow: function(payload) { root.payload = payload }
       exe: root.exe
+      onDone: root.finish()
+    }
+
+    Help {
+      anchors.centerIn: parent
+      visible: root.view === "help"
+      active: panel.shown && visible
+      payload: root.payload
       onDone: root.finish()
     }
 

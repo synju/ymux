@@ -392,6 +392,7 @@ impl<H: Hypr> Engine<H> {
                 };
                 self.summon(serde_json::json!({ "view": view }))?;
             }
+            Request::Action { name } if name == "help" => self.summon(crate::help::help_payload(&self.config))?,
             Request::Action { name } if name == "display-panes" => {
                 let panes = crate::overlay::number_panes(&self.hypr.monitors()?, &self.hypr.clients()?);
                 self.summon(serde_json::json!({

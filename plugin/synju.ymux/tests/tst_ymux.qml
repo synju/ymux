@@ -171,4 +171,27 @@ TestCase {
     compare(rows[3].label, "editor")
     compare(rows[3].name, "editor")
   }
+
+  function test_help_rows_flatten_groups_with_headers() {
+    var rows = Ymux.helpRows({ groups: [{ title: "A", rows: [["x", "do x"]] }, { title: "B", rows: [["y", "do y"], ["z", "do z"]] }] })
+    compare(rows.length, 5)
+    compare(rows[0].header, "A")
+    compare(rows[1].keys, "x")
+    compare(rows[1].text, "do x")
+    compare(rows[2].header, "B")
+    compare(Ymux.helpRows(null).length, 0)
+  }
+
+  function test_scroll_thumb_follows_the_view() {
+    var t = Ymux.scrollThumb(0, 0.5, 400)
+    compare(t.y, 0)
+    compare(t.height, 200)
+    t = Ymux.scrollThumb(0.5, 0.5, 400)
+    compare(t.y, 200)
+    // never smaller than 24 px, and never past the end of the track
+    t = Ymux.scrollThumb(0.99, 0.01, 400)
+    compare(t.height, 24)
+    compare(t.y, 376)
+    compare(Ymux.scrollThumb(0, 1, 400).visible, false)
+  }
 }
