@@ -79,6 +79,16 @@ impl Hypr for FakeHypr {
     }
 }
 
+/// A layouts folder of its own for every engine a test builds: tests run in parallel,
+/// and a shared folder let one test read another's half-written mode file.
+pub fn unique_dir(tag: &str) -> std::path::PathBuf {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static N: AtomicU32 = AtomicU32::new(0);
+    let d = std::env::temp_dir().join(format!("ymux-{tag}-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+    let _ = std::fs::remove_dir_all(&d);
+    d
+}
+
 pub fn monitor(name: &str, description: &str, x: i32, focused: bool, active: i64) -> HMonitor {
     HMonitor { name: name.into(), description: description.into(), focused, active_workspace: active, x, y: 0 }
 }

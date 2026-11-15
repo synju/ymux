@@ -33,7 +33,7 @@ fn two() -> Engine<FakeHypr> {
     *h.monitors.borrow_mut() = vec![monitor("DP-1", "LG A", 0, true, 100001), monitor("DP-2", "Dell B", 2560, false, 200001)];
     *h.workspaces.borrow_mut() = vec![workspace(100001, "DP-1", 1), workspace(100002, "DP-1", 1), workspace(200001, "DP-2", 1)];
     *h.clients.borrow_mut() = vec![client("0xa1", 11, "foot", 100001), client("0xa2", 12, "foot", 100002), client("0xb1", 21, "foot", 200001)];
-    Engine::new(s, Config::default(), h, "sig".into(), std::env::temp_dir().join("ymux-test-layouts-ev"))
+    Engine::new(s, Config::default(), h, "sig".into(), unique_dir("test-layouts-ev"))
 }
 
 fn ev(e: &mut Engine<FakeHypr>, event: Event) {

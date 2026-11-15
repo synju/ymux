@@ -22,7 +22,7 @@ fn one() -> Engine<FakeHypr> {
     *h.monitors.borrow_mut() = vec![monitor("DP-1", "LG A", 0, true, 100001)];
     *h.workspaces.borrow_mut() = vec![workspace(100001, "DP-1", 1)];
     *h.clients.borrow_mut() = vec![client("0xa1", 1, "foot", 100001)];
-    Engine::new(s, Config::default(), h, "sig".into(), std::env::temp_dir().join("ymux-test-view"))
+    Engine::new(s, Config::default(), h, "sig".into(), unique_dir("test-view"))
 }
 
 #[test]

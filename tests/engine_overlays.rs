@@ -18,7 +18,7 @@ fn engine() -> Engine<FakeHypr> {
     let h = FakeHypr::default();
     *h.monitors.borrow_mut() = vec![monitor("DP-1", "LG A", 0, true, 100001)];
     *h.workspaces.borrow_mut() = vec![workspace(100001, "DP-1", 0)];
-    Engine::new(s, Config::default(), h, "sig".into(), std::env::temp_dir().join("ymux-test-ov"))
+    Engine::new(s, Config::default(), h, "sig".into(), unique_dir("test-ov"))
 }
 
 #[test]
