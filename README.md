@@ -18,23 +18,20 @@ starts your apps again and puts them back in their layout.
 
 ## Install
 
-From the AUR:
+From a terminal on your Omarchy desktop:
 
 ```bash
-yay -S ymux
+curl -fsSL https://raw.githubusercontent.com/synju/ymux/main/install.sh | bash
 ```
 
-Then, once for each user:
-
-```bash
-ymux install
-```
-
-`ymux install` writes `~/.ymux.conf` (unless it exists), generates
+The installer checks for Omarchy, Hyprland 0.55+, `jq` and `notify-send`, downloads the
+`ymux` binary from the latest release (or builds it from source when there is none for
+your machine and Rust is installed), and runs `ymux install`. That puts the binary in
+`~/.local/bin/ymux`, writes `~/.ymux.conf` (unless it exists), generates
 `~/.config/hypr/ymux.lua`, adds `require("hypr.ymux")` to
-`~/.config/hypr/hyprland.lua`, installs the bar plugin `synju.ymux` in place of
-Omarchy's workspace widget, and starts the daemon. On the first start it gathers each
-monitor's open workspaces into a session called `main`.
+`~/.config/hypr/hyprland.lua`, puts the bar plugin `synju.ymux` in place of Omarchy's
+workspace widget, and starts the daemon. On the first start it gathers each monitor's
+open workspaces into a session called `main`.
 
 From source:
 
@@ -43,17 +40,14 @@ cargo build --release
 ./target/release/ymux install
 ```
 
-A build installed this way is copied to `~/.local/bin/ymux`.
-
 ## Uninstall
 
 ```bash
 ymux uninstall
 ```
 
-Run it before removing the package (`sudo pacman -R ymux`). It stops the daemon,
-removes the Lua file, the `require` line and the plugin, puts Omarchy's workspace
-widget back, and deletes ymux's state. Only `~/.ymux.conf` is kept.
+It stops the daemon, removes the Lua file, the `require` line and the plugin, puts
+Omarchy's workspace widget back, and deletes ymux's state. Only `~/.ymux.conf` is kept.
 
 ## Keys
 
