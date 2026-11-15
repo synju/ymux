@@ -1,0 +1,45 @@
+{
+  "address": "0x5603603250c0",
+  "mapped": true,
+  "hidden": false,
+  "visible": true,
+  "acceptsInput": true,
+  "at": [
+    12,
+    38
+  ],
+  "size": [
+    716,
+    1030
+  ],
+  "workspace": {
+    "id": 12,
+    "name": "12"
+  },
+  "floating": false,
+  "monitor": 1,
+  "class": "com.anthropic.Claude",
+  "title": "com.anthropic.Claude",
+  "initialClass": "com.anthropic.Claude",
+  "initialTitle": "com.anthropic.Claude",
+  "pid": 454956,
+  "xwayland": false,
+  "pinned": false,
+  "pinFullscreened": false,
+  "fullscreen": 0,
+  "fullscreenClient": 0,
+  "fullscreenHandler": "default",
+  "allowedOverFullscreen": true,
+  "grouped": [],
+  "tags": [
+    "omarchy-mode-opened*"
+  ],
+  "swallowing": "0x0",
+  "focusHistoryID": 0,
+  "inhibitingIdle": true,
+  "xdgTag": "",
+  "xdgDescription": "",
+  "contentType": "none",
+  "tearingHint": false,
+  "stableId": "180001a4"
+}

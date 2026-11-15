@@ -1,0 +1,152 @@
+[
+  {
+    "id": 0,
+    "name": "eDP-2",
+    "description": "BOE 0x0A3B",
+    "make": "BOE",
+    "model": "0x0A3B",
+    "serial": "",
+    "width": 2560,
+    "height": 1600,
+    "physicalWidth": 340,
+    "physicalHeight": 210,
+    "refreshRate": 240.00301,
+    "x": 1920,
+    "y": 480,
+    "activeWorkspace": {
+      "id": 1,
+      "name": "1"
+    },
+    "specialWorkspace": {
+      "id": 0,
+      "name": ""
+    },
+    "reserved": [
+      0,
+      26,
+      0,
+      0
+    ],
+    "scale": 1.6,
+    "transform": 0,
+    "focused": false,
+    "dpmsStatus": true,
+    "vrr": false,
+    "solitary": "0",
+    "solitaryBlockedBy": [
+      "WINDOWED",
+      "CANDIDATE"
+    ],
+    "activelyTearing": false,
+    "tearingBlockedBy": [
+      "NOT_TORN",
+      "USER",
+      "CANDIDATE"
+    ],
+    "directScanoutTo": "0",
+    "directScanoutBlockedBy": [
+      "USER",
+      "SW",
+      "CANDIDATE"
+    ],
+    "disabled": false,
+    "currentFormat": "XRGB8888",
+    "mirrorOf": "none",
+    "availableModes": [
+      "2560x1600@240.00Hz",
+      "2560x1600@60.00Hz"
+    ],
+    "colorManagementPreset": "srgb",
+    "sdrBrightness": 1,
+    "sdrSaturation": 1,
+    "sdrMinLuminance": 0.2,
+    "sdrMaxLuminance": 80,
+    "hardwareCursorsInUse": false
+  },
+  {
+    "id": 1,
+    "name": "DP-1",
+    "description": "HKC OVERSEAS LIMITED GN02 0000000000001",
+    "make": "HKC OVERSEAS LIMITED",
+    "model": "GN02",
+    "serial": "0000000000001",
+    "width": 1920,
+    "height": 1080,
+    "physicalWidth": 600,
+    "physicalHeight": 330,
+    "refreshRate": 60.0,
+    "x": 0,
+    "y": 0,
+    "activeWorkspace": {
+      "id": 12,
+      "name": "12"
+    },
+    "specialWorkspace": {
+      "id": 0,
+      "name": ""
+    },
+    "reserved": [
+      0,
+      26,
+      0,
+      0
+    ],
+    "scale": 1,
+    "transform": 0,
+    "focused": true,
+    "dpmsStatus": true,
+    "vrr": false,
+    "solitary": "0",
+    "solitaryBlockedBy": [
+      "WINDOWED",
+      "CANDIDATE"
+    ],
+    "activelyTearing": false,
+    "tearingBlockedBy": [
+      "NOT_TORN",
+      "USER",
+      "CANDIDATE"
+    ],
+    "directScanoutTo": "0",
+    "directScanoutBlockedBy": [
+      "USER",
+      "SW",
+      "CANDIDATE"
+    ],
+    "disabled": false,
+    "currentFormat": "XRGB8888",
+    "mirrorOf": "none",
+    "availableModes": [
+      "1920x1080@60.00Hz",
+      "1920x1080@144.11Hz",
+      "1920x1080@119.88Hz",
+      "1920x1080@75.00Hz",
+      "1920x1080@60.00Hz",
+      "1920x1080@50.00Hz",
+      "1680x1050@119.99Hz",
+      "1680x1050@59.95Hz",
+      "1280x1024@119.96Hz",
+      "1280x1024@75.03Hz",
+      "1280x1024@60.02Hz",
+      "1440x900@119.85Hz",
+      "1440x900@59.89Hz",
+      "1280x720@59.94Hz",
+      "1280x720@50.00Hz",
+      "1024x768@75.03Hz",
+      "1024x768@60.00Hz",
+      "800x600@75.00Hz",
+      "800x600@60.32Hz",
+      "720x576@50.00Hz",
+      "720x480@59.94Hz",
+      "640x480@75.00Hz",
+      "640x480@59.94Hz",
+      "640x480@59.93Hz"
+    ],
+    "colorManagementPreset": "srgb",
+    "sdrBrightness": 1,
+    "sdrSaturation": 1,
+    "sdrMinLuminance": 0.2,
+    "sdrMaxLuminance": 80,
+    "hardwareCursorsInUse": false
+  }
+]

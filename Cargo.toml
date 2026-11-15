@@ -1,0 +1,24 @@
+[package]
+name = "ymux"
+version = "0.1.0"
+edition = "2024"
+description = "tmux-like sessions, workspaces and tiles for the Omarchy desktop (omarchymux)"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/synju/ymux"
+keywords = ["omarchy", "hyprland", "tmux", "workspaces", "wayland"]
+
+[[bin]]
+name = "ymux"
+path = "src/main.rs"
+
+[lib]
+name = "ymux"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+libc = "0.2"
+smithay-client-toolkit = { version = "0.21.1", default-features = false }

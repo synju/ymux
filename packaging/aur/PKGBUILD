@@ -1,0 +1,40 @@
+# Maintainer: synju
+pkgname=ymux
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="omarchymux: tmux-style sessions, workspaces and tiles for the Omarchy desktop"
+arch=('x86_64' 'aarch64')
+url="https://github.com/synju/ymux"
+license=('MIT')
+depends=('omarchy>=4.5' 'hyprland>=0.55' 'jq' 'libnotify' 'gcc-libs' 'glibc')
+makedepends=('cargo')
+install=ymux.install
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+# replace with the real checksum (updpkgsums) once the v0.1.0 tag is published
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo test --frozen --release
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 target/release/ymux "$pkgdir/usr/bin/ymux"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
