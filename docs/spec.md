@@ -461,9 +461,10 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
      not shown.
 6. **Closing things, like tmux:**
    - **Tile:** Leader + `x` or Super + W (section 2), no confirmation. An app tile is
-     closed by asking the app to close, with a placeholder keeping its spot (section
-     5.7). If an app refuses (for example an unsaved-changes dialog), it is put back in
-     its spot and nothing is deleted.
+     closed by asking the app to close where it is; once it has really closed, a
+     placeholder keeps its spot (section 5.7). An app that asks first (Brave's "close 2
+     tabs?", an unsaved-changes dialog) stays where it is, untouched, for as long as it
+     takes; cancelled, nothing changes.
    - **Workspace:** deletion is **event-driven**, never a sweep: a workspace is deleted
      when its last tile closes or moves away, or when it is left (stops being shown)
      while it has no tiles, even if it was renamed (tmux closes a window when its last
@@ -495,13 +496,15 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
    - **Where one appears** (user decision 2026-11-15):
      - when an app leaves its spot through a ymux move (Super + Shift + 1-0 or
        Super + Shift + Alt + 1-0);
-     - when a tiled app is closed with Leader + `x` or Super + W (user decision
-       2026-11-15): the
-       placeholder is swapped into the app's spot first (exact spot and size), then the
-       app, now on the stash, is asked to close. If it is still open 3 s later (for
-       example an unsaved-changes dialog), it is swapped back into its spot, the
-       placeholder closes, and a notification says the app did not close. If the
-       placeholder does not appear within 5 s, the app is closed without one;
+     - when a tiled app is closed with Leader + `x` or Super + W (user decisions
+       2026-11-15 and 2026-11-16): ymux records the workspace's layout and asks the app
+       to close where it is, with no time limit, so a question the app asks first shows
+       in place. When the app's window has really closed, a placeholder is opened,
+       moved in next to the app's former neighbour, and the recorded layout is restored
+       with the placeholder where the app was (the tree rebuild of the floating round
+       trip, section 5.7; the workspace's windows briefly flicker). An app moved
+       elsewhere before it closes leaves no spot. (Earlier the placeholder was swapped
+       in first and the app hidden on the stash, which hid Brave's close question.)
      - in every **new workspace** ymux creates: Leader + `c`, a new session's
        workspace 1 (`new` in the command prompt), and the `main` a monitor gets when it
        has no sessions. One placeholder fills the workspace, like the shell a new tmux

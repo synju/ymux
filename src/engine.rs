@@ -119,6 +119,8 @@ pub struct Engine<H: Hypr> {
     /// Workspaces back from floating, rearranged once Hyprland has laid them out
     /// (spec 5.7 "Returning").
     pub(crate) rearrange_due: Vec<(i64, Instant)>,
+    /// Closes asked with Leader + x / Super + W that have not happened yet.
+    pub(crate) pending_close: Vec<crate::tiles::PendingClose>,
     /// When a window last closed; the restore snapshot waits for closes to stop (a
     /// shutdown closes every window).
     pub last_close: Option<Instant>,
@@ -149,6 +151,7 @@ impl<H: Hypr> Engine<H> {
             exe: crate::daemon::installed_exe().display().to_string(),
             jobs: Vec::new(),
             rearrange_due: Vec::new(),
+            pending_close: Vec::new(),
             restore: None,
             last_close: None,
             busy: HashSet::new(),
@@ -606,6 +609,9 @@ impl<H: Hypr> Engine<H> {
             }
             Event::CloseWindow { address } => {
                 self.last_close = Some(Instant::now());
+                // a close asked with Leader + x / Super + W happened: its spot stays (the
+                // placeholder job keeps the workspace alive meanwhile)
+                self.placeholder_for_close(&address)?;
                 if self.state.mark.as_deref() == Some(address.as_str()) {
                     self.state.mark = None;
                     self.dirty = true;
@@ -617,6 +623,8 @@ impl<H: Hypr> Engine<H> {
                 self.kill_progress(&address)?;
             }
             Event::MoveWindow { address, workspace, .. } => {
+                // a window moved before it closed leaves no spot behind
+                self.pending_close.retain(|p| p.app != address);
                 // a given name goes with the window
                 let name = self.state.workspaces.values().flat_map(|w| &w.tiles).find(|t| t.address == address).and_then(|t| t.name.clone());
                 let old = self.remove_tile(&address);

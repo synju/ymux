@@ -16,9 +16,9 @@ pub(crate) enum JobKind {
     FillNew { target: i64 },
     /// Keep the spot an app is leaving, then deliver the app (spec 5.7).
     LeaveSpot { app: String, source: i64, target: i64, follow: bool },
-    /// Leader + x on an app: the placeholder takes its spot, then the app is closed;
-    /// `ph` is set once swapped in (user decision 2026-11-15).
-    CloseApp { app: String, source: i64, ph: Option<String> },
+    /// An app closed with Leader + x / Super + W has really gone: a placeholder takes
+    /// its spot, and the workspace's layout recorded at the close is restored.
+    FillSpot { target: i64, after: Option<String>, app: String, layout: Vec<crate::model::SavedTile> },
     /// Bring a placeholder lost while the daemon was down back next to its old
     /// neighbour (spec 3.2.8).
     Recreate { target: i64, after: Option<String>, refocus: Option<String> },
@@ -35,14 +35,20 @@ pub(crate) struct PlaceholderJob {
 }
 
 const SETTLE: Duration = Duration::from_secs(1);
-/// How long a closed app gets before it is put back (unsaved-changes dialogs).
-const CLOSE_WAIT: Duration = Duration::from_secs(3);
+/// A close asked of an app (Leader + x / Super + W) that has not happened yet: the app
+/// stays where it is, answering any question of its own (user decision 2026-11-16).
+#[derive(Clone, Debug)]
+pub(crate) struct PendingClose {
+    pub app: String,
+    pub workspace: i64,
+    pub layout: Vec<crate::model::SavedTile>,
+}
 
 impl JobKind {
     fn workspaces(&self) -> Vec<i64> {
         match self {
             JobKind::FillNew { target } | JobKind::Recreate { target, .. } => vec![*target],
-            JobKind::CloseApp { source, .. } => vec![*source],
+            JobKind::FillSpot { target, .. } => vec![*target],
             JobKind::LeaveSpot { source, target, .. } => vec![*source, *target],
         }
     }
@@ -185,19 +191,17 @@ impl<H: Hypr> Engine<H> {
                 }
                 self.deliver(app, *target, *follow)?;
             }
-            JobKind::CloseApp { app, source, .. } => {
-                let live = self.hypr.clients()?.iter().any(|c| &c.address == app);
-                if live && self.state.workspaces.contains_key(source) {
-                    self.hypr.dispatch(&swap_windows(address, app))?;
-                    self.hypr.dispatch(&close_window(app))?;
-                    self.remove_tile(app);
-                    let tile = self.tile_for(address)?;
-                    self.put_tile(*source, tile);
-                    let job = &mut self.jobs[pos];
-                    job.kind = JobKind::CloseApp { app: app.clone(), source: *source, ph: Some(address.into()) };
-                    job.deadline = Instant::now() + CLOSE_WAIT;
-                } else {
-                    self.hypr.dispatch(&close_window(address))?;
+            JobKind::FillSpot { target, after, app, layout } => {
+                let refocus = self.focused.clone();
+                self.place_recreated(address, *target, after.as_deref(), refocus.as_deref())?;
+                // restore the layout as it stood at the close, the placeholder where
+                // the app was (spec 5.7; the rebuild of the floating round trip)
+                if let Some(w) = self.state.workspaces.get_mut(target) {
+                    w.archived_layout = layout
+                        .iter()
+                        .map(|t| crate::model::SavedTile { address: if &t.address == app { address.into() } else { t.address.clone() }, ..t.clone() })
+                        .collect();
+                    self.schedule_rearrange(*target);
                 }
             }
             JobKind::Recreate { target, after, refocus } => {
@@ -207,34 +211,44 @@ impl<H: Hypr> Engine<H> {
         Ok(true)
     }
 
-    /// Leader + x / Super + W: close the window; a tiled app keeps its spot on tiled
-    /// workspaces, anything else (placeholder, floating, untracked) closes at once.
+    /// Leader + x / Super + W: ask the window to close where it is. A tiled app on a
+    /// tiled workspace keeps its spot once it has really closed (`placeholder_for_close`);
+    /// until then it stays untouched, so a question it asks first shows in place.
     pub(crate) fn close_app(&mut self, app: &str) -> Result<()> {
         let hit = self
             .state
             .workspaces
             .values()
             .find_map(|w| w.tiles.iter().find(|t| t.address == app).map(|t| (w.real_id, t.is_placeholder() || t.floating)));
-        match hit {
-            Some((source, false)) if self.wants_placeholder(source)? => {
-                self.spawn_placeholder(JobKind::CloseApp { app: app.into(), source, ph: None })
+        if let Some((ws, false)) = hit
+            && self.wants_placeholder(ws)?
+        {
+            // the layout as it stands now, to give the spot back exactly
+            if self.capture_geometry()? {
+                self.dirty = true;
             }
-            _ => self.hypr.dispatch(&close_window(app)),
+            let mut layout: Vec<crate::model::SavedTile> = self.state.workspaces[&ws]
+                .tiles
+                .iter()
+                .map(|t| crate::model::SavedTile { address: t.address.clone(), at: t.at, size: t.size })
+                .collect();
+            layout.sort_by_key(|t| reading_key(t.at));
+            self.pending_close.retain(|p| p.app != app);
+            self.pending_close.push(PendingClose { app: app.into(), workspace: ws, layout });
         }
+        self.hypr.dispatch(&close_window(app))
     }
 
-    /// An app still open after it was asked to close goes back into its spot.
-    fn put_back(&mut self, app: &str, source: i64, ph: &str) -> Result<()> {
-        let Some(c) = self.hypr.clients()?.into_iter().find(|c| c.address == app) else { return Ok(()) };
-        self.hypr.dispatch(&swap_windows(app, ph))?;
-        self.hypr.dispatch(&close_window(ph))?;
-        self.remove_tile(ph);
-        if self.state.workspaces.contains_key(&source) {
-            let tile = self.tile_for(app)?;
-            self.put_tile(source, tile);
+    /// The app asked to close has closed: a placeholder comes for its spot.
+    pub(crate) fn placeholder_for_close(&mut self, app: &str) -> Result<()> {
+        let Some(i) = self.pending_close.iter().position(|p| p.app == app) else { return Ok(()) };
+        let p = self.pending_close.remove(i);
+        if !self.state.workspaces.contains_key(&p.workspace) || !self.wants_placeholder(p.workspace)? {
+            return Ok(());
         }
-        self.hypr.notify(&format!("ymux: {} did not close; it is back in its spot", c.class));
-        Ok(())
+        let i = p.layout.iter().position(|t| t.address == app);
+        let after = i.and_then(|i| i.checked_sub(1)).map(|j| p.layout[j].address.clone());
+        self.spawn_placeholder(JobKind::FillSpot { target: p.workspace, after, app: app.into(), layout: p.layout })
     }
 
     fn release_job(&mut self, job: &PlaceholderJob) -> Result<()> {
@@ -257,18 +271,10 @@ impl<H: Hypr> Engine<H> {
             self.dirty = true;
         }
         for job in due {
-            match (&job.kind, job.settling) {
-                (JobKind::LeaveSpot { app, target, follow, .. }, false) => {
-                    // the placeholder never came: move the app anyway
-                    eprintln!("ymux: placeholder did not appear; moving the app without it");
-                    self.deliver(app, *target, *follow)?;
-                }
-                (JobKind::CloseApp { app, .. }, false) => {
-                    eprintln!("ymux: placeholder did not appear; closing the app without it");
-                    self.hypr.dispatch(&close_window(app))?;
-                }
-                (JobKind::CloseApp { app, source, ph: Some(ph) }, true) => self.put_back(app, *source, ph)?,
-                _ => {}
+            if let (JobKind::LeaveSpot { app, target, follow, .. }, false) = (&job.kind, job.settling) {
+                // the placeholder never came: move the app anyway
+                eprintln!("ymux: placeholder did not appear; moving the app without it");
+                self.deliver(app, *target, *follow)?;
             }
             self.release_job(&job)?;
         }

@@ -108,10 +108,8 @@ fn kill_tile_on_app_closes_without_asking() {
     let mut e = engine("killapp");
     *e.hypr().active.borrow_mut() = Some("0xa1".into());
     e.handle(Request::Action { name: "kill-tile".into() });
-    // no confirmation card: straight to the keep-the-spot close
-    assert_eq!(e.hypr().spawned.borrow().clone(), vec![ph_argv()]);
-    open_ph(&mut e, 9000, "0xp");
-    assert!(e.hypr().dispatched().contains(&close_window("0xa1")));
+    // no confirmation card, and the app is asked where it stands
+    assert_eq!(e.hypr().dispatched(), vec![close_window("0xa1")]);
 }
 
 #[test]
@@ -323,50 +321,85 @@ fn closing_marked_window_clears_mark() {
     assert_eq!(e.state.mark, None);
 }
 
-// ---- Leader + x on an app leaves its spot (user decision 2026-11-15) -------------
+// ---- Leader + x / Super + W: ask in place, keep the spot once closed --------------
+// (user decision 2026-11-16: Brave's "close 2 tabs?" must show where Brave is)
 
 #[test]
-fn closing_app_swaps_placeholder_in_then_closes_app() {
-    let mut e = engine("closeapp");
+fn closing_an_app_asks_it_in_place_first() {
+    let mut e = engine("askinplace");
     e.handle(Request::CloseWindow { address: "0xa1".into() });
+    assert_eq!(e.hypr().dispatched(), vec![close_window("0xa1")], "nothing hidden, nothing swapped");
+    assert!(e.hypr().spawned.borrow().is_empty(), "no spot until it really closes");
+}
+
+#[test]
+fn an_app_that_does_not_close_stays_where_it_is() {
+    let mut e = engine("staysput");
+    e.handle(Request::CloseWindow { address: "0xa1".into() });
+    e.on_deadline(Instant::now() + Duration::from_secs(3600)).unwrap();
+    assert_eq!(e.hypr().dispatched(), vec![close_window("0xa1")]);
+    assert!(e.hypr().notified.borrow().is_empty());
+    assert!(e.state.workspaces[&100001].tiles.iter().any(|t| t.address == "0xa1"));
+}
+
+fn really_close(e: &mut Engine<FakeHypr>, addr: &str) {
+    e.hypr().clients.borrow_mut().retain(|c| c.address != addr);
+    e.on_event(Event::CloseWindow { address: addr.into() }).unwrap();
+}
+
+#[test]
+fn once_the_app_closes_a_placeholder_takes_its_spot() {
+    let mut e = engine("spotafter");
+    e.handle(Request::CloseWindow { address: "0xa1".into() });
+    really_close(&mut e, "0xa1");
     assert_eq!(e.hypr().spawned.borrow().clone(), vec![ph_argv()]);
-    assert!(e.hypr().dispatched().is_empty(), "nothing closes before the placeholder is in");
     open_ph(&mut e, 9000, "0xp");
-    assert_eq!(e.hypr().dispatched(), vec![ymux::hypr::swap_windows("0xp", "0xa1"), close_window("0xa1")]);
+    assert!(e.hypr().dispatched().contains(&move_window("0xp", 100001, false)));
     assert!(e.state.workspaces[&100001].tiles.iter().any(|t| t.address == "0xp" && t.is_placeholder()));
 }
 
 #[test]
-fn app_that_refuses_to_close_is_put_back() {
-    let mut e = engine("refuse");
+fn the_spot_is_restored_from_the_layout_recorded_at_close() {
+    let mut e = engine("spotlayout");
     e.handle(Request::CloseWindow { address: "0xa1".into() });
+    really_close(&mut e, "0xa1");
     open_ph(&mut e, 9000, "0xp");
-    e.hypr().clear();
-    // still open after the wait
-    e.on_deadline(Instant::now() + Duration::from_secs(4)).unwrap();
-    assert_eq!(e.hypr().dispatched(), vec![ymux::hypr::swap_windows("0xa1", "0xp"), close_window("0xp")]);
-    assert_eq!(e.hypr().notified.borrow().len(), 1);
+    // the layout to restore names the placeholder where the app was
+    let w = &e.state.workspaces[&100001];
+    assert!(w.archived_layout.iter().any(|t| t.address == "0xp"));
+    assert!(!w.archived_layout.iter().any(|t| t.address == "0xa1"));
+    e.on_deadline(Instant::now() + Duration::from_secs(2)).unwrap();
+    assert!(e.state.workspaces[&100001].archived_layout.is_empty(), "restored");
 }
 
 #[test]
-fn app_that_closed_is_not_put_back() {
-    let mut e = engine("closed");
-    e.handle(Request::CloseWindow { address: "0xa1".into() });
-    open_ph(&mut e, 9000, "0xp");
-    e.hypr().clients.borrow_mut().retain(|c| c.address != "0xa1");
-    e.on_event(Event::CloseWindow { address: "0xa1".into() }).unwrap();
-    e.hypr().clear();
-    e.on_deadline(Instant::now() + Duration::from_secs(4)).unwrap();
-    assert!(e.hypr().dispatched().is_empty());
-    assert!(e.hypr().notified.borrow().is_empty());
+fn the_last_app_of_an_unshown_workspace_keeps_it_for_its_spot() {
+    let mut e = engine("keepws");
+    e.state.create_workspace(1); // 100002, not shown
+    e.state.workspaces.get_mut(&100002).unwrap().tiles.push(Tile {
+        address: "0xb".into(),
+        pid: Some(2),
+        class: "foot".into(),
+        ..Default::default()
+    });
+    e.hypr().workspaces.borrow_mut().push(workspace(100002, "DP-1", 1));
+    e.hypr().clients.borrow_mut().push(client("0xb", 2, "foot", 100002));
+    e.handle(Request::CloseWindow { address: "0xb".into() });
+    really_close(&mut e, "0xb");
+    assert!(e.state.workspaces.contains_key(&100002));
+    assert_eq!(e.hypr().spawned.borrow().len(), 1);
 }
 
 #[test]
-fn closing_app_without_placeholder_appearing_still_closes_it() {
-    let mut e = engine("closenoph");
+fn an_app_moved_away_before_it_closes_leaves_no_spot() {
+    let mut e = engine("movedaway");
+    e.state.create_workspace(1); // 100002
+    e.hypr().workspaces.borrow_mut().push(workspace(100002, "DP-1", 0));
     e.handle(Request::CloseWindow { address: "0xa1".into() });
-    e.on_deadline(Instant::now() + Duration::from_secs(6)).unwrap();
-    assert_eq!(e.hypr().dispatched(), vec![close_window("0xa1")]);
+    e.hypr().clients.borrow_mut()[0].workspace = 100002;
+    e.on_event(Event::MoveWindow { address: "0xa1".into(), workspace: 100002, workspace_name: "100002".into() }).unwrap();
+    really_close(&mut e, "0xa1");
+    assert!(e.hypr().spawned.borrow().is_empty());
 }
 
 #[test]
@@ -374,29 +407,9 @@ fn closing_app_on_floating_workspace_just_closes_it() {
     let mut e = engine("closefloat");
     fs::write(e.layouts_dir().join("100001.lua"), "o.workspace_mode({ workspace = \"100001\", mode = \"floating\" })\n").unwrap();
     e.handle(Request::CloseWindow { address: "0xa1".into() });
+    really_close(&mut e, "0xa1");
     assert!(e.hypr().spawned.borrow().is_empty());
     assert_eq!(e.hypr().dispatched(), vec![close_window("0xa1")]);
-}
-
-#[test]
-fn close_app_records_the_placeholders_real_spot_once_settled() {
-    let mut e = engine("closesettle");
-    e.handle(Request::CloseWindow { address: "0xa1".into() });
-    open_ph(&mut e, 9000, "0xp"); // recorded while still on the stash
-    {
-        // the swap has landed: the placeholder sits in the app's spot now
-        let mut c = e.hypr().clients.borrow_mut();
-        let p = c.iter_mut().find(|c| c.address == "0xp").unwrap();
-        p.workspace = 100001;
-        p.workspace_name = "100001".into();
-        p.at = (12, 38);
-        p.size = (1896, 1030);
-        c.retain(|c| c.address != "0xa1"); // the app did close
-    }
-    e.on_event(Event::CloseWindow { address: "0xa1".into() }).unwrap();
-    e.on_deadline(Instant::now() + Duration::from_secs(4)).unwrap();
-    let t = e.state.workspaces[&100001].tiles.iter().find(|t| t.address == "0xp").unwrap().clone();
-    assert_eq!((t.at, t.size), ((12, 38), (1896, 1030)));
 }
 
 // ---- review minors 5 and 8 --------------------------------------------------------

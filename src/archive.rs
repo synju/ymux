@@ -232,6 +232,13 @@ impl<H: Hypr> Engine<H> {
         }
     }
 
+    /// Restore a workspace's saved layout once Hyprland has laid it out.
+    pub(crate) fn schedule_rearrange(&mut self, id: i64) {
+        if !self.rearrange_due.iter().any(|(w, _)| *w == id) {
+            self.rearrange_due.push((id, std::time::Instant::now() + SETTLE));
+        }
+    }
+
     pub(crate) fn run_due_rearranges(&mut self, now: std::time::Instant) -> Result<()> {
         let (due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.rearrange_due).into_iter().partition(|(_, t)| *t <= now);
         self.rearrange_due = rest;
