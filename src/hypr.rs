@@ -39,6 +39,8 @@ pub struct HClient {
     pub size: (i32, i32),
     pub tags: Vec<String>,
     pub hidden: bool,
+    /// 0 none, 1 maximized, 2 fullscreen (spikes.md, fullscreen spike).
+    pub fullscreen: u8,
 }
 
 /// What `/proc` says about a process: its argv and working directory (spec 7.2).
@@ -102,6 +104,20 @@ pub fn set_mode(id: i64, mode: &str) -> String {
 
 pub fn swap_windows(target: &str, window: &str) -> String {
     format!("hl.dsp.window.swap({{ target = \"address:{target}\", window = \"address:{window}\" }})")
+}
+
+/// `mode` is `fullscreen` or `maximized`, `action` `set`, `unset` or `toggle`.
+pub fn fullscreen(address: &str, mode: &str, action: &str) -> String {
+    format!("hl.dsp.window.fullscreen({{ mode = \"{mode}\", action = \"{action}\", window = \"address:{address}\" }})")
+}
+
+/// The fullscreen mode name for a client's `fullscreen` state.
+pub fn fullscreen_mode(state: u8) -> Option<&'static str> {
+    match state {
+        0 => None,
+        1 => Some("maximized"),
+        _ => Some("fullscreen"),
+    }
 }
 
 pub fn focus_window(address: &str) -> String {
@@ -175,6 +191,8 @@ struct RawClient {
     tags: Vec<String>,
     #[serde(default)]
     hidden: bool,
+    #[serde(default)]
+    fullscreen: u8,
 }
 
 pub fn parse_monitors(json: &str) -> Result<Vec<HMonitor>> {
@@ -213,6 +231,7 @@ fn to_client(c: RawClient) -> HClient {
         size: c.size,
         tags: c.tags,
         hidden: c.hidden,
+        fullscreen: c.fullscreen,
     }
 }
 
@@ -302,7 +321,7 @@ impl Hypr for Hyprctl {
         Ok(pid)
     }
     fn notify(&self, msg: &str) {
-        let _ = Command::new("notify-send").args(["ymux", msg]).status();
+        crate::messages::notify(msg);
     }
 }
 

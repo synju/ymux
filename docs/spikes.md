@@ -219,3 +219,12 @@ the window comes from its running process). Omarchy sets `dwindle:force_split = 
 - Reboot 3: pass. Ghostty, Claude Desktop and Vivaldi came back on the external
   monitor's workspace (user confirmed).
 - Not yet run: relaunch off across a reboot, a Flatpak with a `launch-override`.
+
+## Fullscreen and swap (2026-11-16, laptop test terminal)
+
+- `hl.dsp.window.swap` on a fullscreen window fails with `Can't swap fullscreen window`
+  (seen live: Vivaldi fullscreen on YouTube).
+- `hyprctl -j clients` reports `fullscreen` 0 (none), 1 (maximized), 2 (fullscreen).
+- `hl.dsp.window.fullscreen({ mode = "fullscreen" | "maximized", action = "unset" | "set" | "toggle", window = "address:..." })`
+  works by address: `unset` took a fullscreen window to 0, `set` back to 2; the
+  `maximized` mode gives 1.

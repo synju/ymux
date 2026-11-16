@@ -2,7 +2,7 @@ mod common;
 use ymux::config::Config;
 use ymux::engine::{Engine, Request};
 use ymux::events::Event;
-use ymux::hypr::{close_window, move_window};
+use ymux::hypr::{close_window, fullscreen, move_window};
 use ymux::model::{State, Tile};
 use common::*;
 use std::fs;
@@ -285,10 +285,54 @@ fn swap_with_mark_across_workspaces() {
     e.state.mark = Some("0xa2".into());
     *e.hypr().active.borrow_mut() = Some("0xa1".into());
     assert!(e.handle(Request::Action { name: "swap".into() }).ok);
-    assert_eq!(e.hypr().dispatched(), vec![swap_windows("0xa2", "0xa1")]);
+    // the marked window is "pasted" where you are, and gets the focus
+    assert_eq!(e.hypr().dispatched(), vec![swap_windows("0xa2", "0xa1"), focus_window("0xa2")]);
     assert!(e.state.workspaces[&100001].tiles.iter().any(|t| t.address == "0xa2"));
     assert!(e.state.workspaces[&other].tiles.iter().any(|t| t.address == "0xa1"));
     assert_eq!(e.state.mark, None);
+}
+
+/// The marked window is fullscreen (a video), the focused one maximized: Hyprland will not
+/// swap either way, so ymux leaves both states, swaps, and puts them back.
+#[test]
+fn swap_leaves_fullscreen_and_restores_it() {
+    let mut e = engine("swapfs");
+    let other = e.state.create_workspace(1);
+    e.state.workspaces.get_mut(&other).unwrap().tiles.push(Tile { address: "0xa2".into(), class: "vivaldi".into(), ..Default::default() });
+    let mut v = client("0xa2", 2, "vivaldi", other);
+    v.fullscreen = 2;
+    e.hypr().clients.borrow_mut().push(v);
+    e.hypr().clients.borrow_mut()[0].fullscreen = 1;
+    e.state.mark = Some("0xa2".into());
+    *e.hypr().active.borrow_mut() = Some("0xa1".into());
+    assert!(e.handle(Request::Action { name: "swap".into() }).ok);
+    assert_eq!(
+        e.hypr().dispatched(),
+        vec![
+            fullscreen("0xa2", "fullscreen", "unset"),
+            fullscreen("0xa1", "maximized", "unset"),
+            swap_windows("0xa2", "0xa1"),
+            fullscreen("0xa2", "fullscreen", "set"),
+            fullscreen("0xa1", "maximized", "set"),
+            focus_window("0xa2"),
+        ]
+    );
+    assert_eq!(e.state.mark, None);
+}
+
+#[test]
+fn a_failed_swap_still_restores_fullscreen() {
+    let mut e = engine("swapfsfail");
+    let other = e.state.create_workspace(1);
+    e.state.workspaces.get_mut(&other).unwrap().tiles.push(Tile { address: "0xa2".into(), class: "vivaldi".into(), ..Default::default() });
+    let mut v = client("0xa2", 2, "vivaldi", other);
+    v.fullscreen = 2;
+    e.hypr().clients.borrow_mut().push(v);
+    e.hypr().fail_dispatch.borrow_mut().push("window.swap".into());
+    e.state.mark = Some("0xa2".into());
+    *e.hypr().active.borrow_mut() = Some("0xa1".into());
+    assert!(!e.handle(Request::Action { name: "swap".into() }).ok);
+    assert_eq!(e.hypr().dispatched().last(), Some(&fullscreen("0xa2", "fullscreen", "set")));
 }
 
 #[test]
@@ -310,7 +354,7 @@ fn swap_never_closes_a_placeholder() {
     e.state.mark = Some("0xp".into());
     *e.hypr().active.borrow_mut() = Some("0xa1".into());
     e.handle(Request::Action { name: "swap".into() });
-    assert_eq!(e.hypr().dispatched(), vec![swap_windows("0xp", "0xa1")]);
+    assert_eq!(e.hypr().dispatched(), vec![swap_windows("0xp", "0xa1"), focus_window("0xp")]);
 }
 
 #[test]

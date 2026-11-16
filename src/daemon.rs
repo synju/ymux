@@ -89,7 +89,7 @@ pub fn view_json<H: crate::hypr::Hypr>(engine: &Engine<H>) -> Option<String> {
 }
 
 pub fn notify(msg: &str) {
-    let _ = std::process::Command::new("notify-send").args(["ymux", msg]).status();
+    crate::messages::notify(msg);
 }
 
 /// Where install puts the binary; the generated Lua always points here, never at the

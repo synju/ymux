@@ -3,12 +3,12 @@
 use ymux::engine::{Request, Response};
 use ymux::ipc;
 use std::io::BufRead;
-use std::process::{exit, Command};
+use std::process::exit;
 
-const USAGE: &str = "usage: ymux <focus N | move N [--silent] | next | prev | previous | new-workspace | new [NAME] | switch N | session-move l|r|u|d | action NAME | status | watch | daemon | install | uninstall>";
+const USAGE: &str = "usage: ymux <focus N | move N [--silent] | next | prev | previous | new-workspace | new [NAME] | switch N | session-move l|r|u|d | action NAME | status | watch | daemon | install | uninstall | errors [N]>";
 
 fn notify(msg: &str) {
-    let _ = Command::new("notify-send").args(["ymux", msg]).status();
+    ymux::messages::notify(msg);
 }
 
 fn parse_request(args: &[String]) -> Option<Request> {
@@ -50,6 +50,9 @@ fn parse_request(args: &[String]) -> Option<Request> {
 fn client(req: Request, quiet: bool) -> i32 {
     let fail = |msg: &str| {
         if quiet {
+            // shown by the overlay that ran it; kept for `ymux errors` all the same
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+            ymux::messages::record(&ymux::messages::log_path(), msg, now);
             println!("{msg}");
         } else {
             notify(msg);
@@ -99,6 +102,17 @@ fn main() {
                 1
             }
         },
+        Some("errors") => {
+            let n = args.get(1).and_then(|a| a.parse().ok()).unwrap_or(20);
+            let lines = ymux::messages::latest(&ymux::messages::log_path(), n);
+            if lines.is_empty() {
+                println!("no ymux messages yet");
+            }
+            for l in lines {
+                println!("{l}");
+            }
+            0
+        }
         Some("uninstall") => match ymux::install::uninstall() {
             Ok(()) => 0,
             Err(e) => {

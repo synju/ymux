@@ -17,3 +17,4 @@ pub mod tiles;
 pub mod archive;
 pub mod relaunch;
 pub mod help;
+pub mod messages;

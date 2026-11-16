@@ -110,5 +110,6 @@ pub fn client(address: &str, pid: u32, class: &str, workspace: i64) -> HClient {
         size: (100, 100),
         tags: vec![],
         hidden: false,
+        fullscreen: 0,
     }
 }

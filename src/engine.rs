@@ -426,14 +426,33 @@ impl<H: Hypr> Engine<H> {
                 }
             }
             Request::Action { name } if name == "swap" => {
-                let live: Vec<String> = self.hypr.clients()?.into_iter().map(|c| c.address).collect();
-                let Some(mark) = self.state.mark.clone().filter(|m| live.contains(m)) else {
+                let clients = self.hypr.clients()?;
+                let Some(mark) = self.state.mark.clone().filter(|m| clients.iter().any(|c| &c.address == m)) else {
                     return Ok(Response::err("ymux: no marked tile".into()));
                 };
                 let Some(focused) = self.hypr.active_address()? else { return Ok(Response::ok()) };
                 if focused != mark {
-                    self.hypr.dispatch(&crate::hypr::swap_windows(&mark, &focused))?;
+                    // Hyprland will not swap a fullscreen or maximized window: leave that
+                    // state, swap, and give it back, also when the swap fails
+                    let states: Vec<(String, &str)> = [&mark, &focused]
+                        .into_iter()
+                        .filter_map(|a| {
+                            let state = clients.iter().find(|c| &c.address == a)?.fullscreen;
+                            crate::hypr::fullscreen_mode(state).map(|m| (a.clone(), m))
+                        })
+                        .collect();
+                    for (a, m) in &states {
+                        self.hypr.dispatch(&crate::hypr::fullscreen(a, m, "unset"))?;
+                    }
+                    let swapped = self.hypr.dispatch(&crate::hypr::swap_windows(&mark, &focused));
+                    for (a, m) in &states {
+                        self.hypr.dispatch(&crate::hypr::fullscreen(a, m, "set"))?;
+                    }
+                    swapped?;
                     self.swap_records(&mark, &focused);
+                    // the marked window is "pasted" where you are: give it the focus
+                    // (user request 2026-11-16)
+                    self.hypr.dispatch(&crate::hypr::focus_window(&mark))?;
                 }
                 self.state.mark = None;
                 self.dirty = true;

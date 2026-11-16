@@ -82,7 +82,7 @@ configurable in v1.
 | Leader, then `o` | Open the options modal |
 | Leader, then `q` | Show a number over every visible tile on all monitors; pressing a number focuses that tile (section 5.5) |
 | Leader, then `m` | Mark the focused tile (one mark at a time, like tmux `select-pane -m`) |
-| Leader, then `v` | Swap the focused tile with the marked tile, across workspaces and monitors (like the user's tmux `bind v swap-pane`, `~/.tmux.conf:106`). Always a plain swap: if one side is a placeholder, the app takes the placeholder's spot and the placeholder takes the app's old spot, so that spot stays open |
+| Leader, then `v` | Swap the focused tile with the marked tile, across workspaces and monitors (like the user's tmux `bind v swap-pane`, `~/.tmux.conf:106`). Always a plain swap: if one side is a placeholder, the app takes the placeholder's spot and the placeholder takes the app's old spot, so that spot stays open. A fullscreen or maximized window on either side is taken out of that state for the swap and put back after (user request 2026-11-16; Hyprland refuses to swap a fullscreen window). The marked window then has the focus, as it is the one brought to where you are |
 | Leader, then `x` | Close the focused tile at once, no confirmation (user decision 2026-11-15; Super + W does the same, takeover 9): a placeholder closes and the other tiles fill the space; a tiled app is closed and an empty spot (placeholder) holds its place (section 5.7); a floating window just closes |
 | Leader, then arrows (B released, Super held) | Resize the focused tile; arrows repeat while held; releasing Super ends resize mode |
 | Shift + Ctrl + Alt + H / L | Previous / next workspace in the current session, wrapping around at either end like tmux `previous-window` / `next-window` (verified free) |
@@ -656,6 +656,12 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
    pids and geometry (section 7.2) are recorded with the toggle on or off: the restart
    rules (section 3.2 item 8) depend on them. The toggle only decides whether section
    7.3 relaunches anything.
+
+6. **Messages** (user request 2026-11-16): every message ymux shows as a toast is also
+   appended to `~/.local/state/ymux/errors.log` (UTC time, one line each, the latest
+   200 kept), and the toast ends with "(to copy it: run ymux errors)". `ymux errors
+   [N]` prints the last N (default 20). Messages from an overlay's own command (run
+   with `--no-notify`) are logged too.
 
 ## 7. Relaunch and layout restore
 

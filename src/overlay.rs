@@ -71,7 +71,7 @@ mod tests {
         HMonitor { name: name.into(), description: name.into(), focused: false, active_workspace: active, x, y: 0 }
     }
     fn cl(addr: &str, ws: i64, at: (i32, i32)) -> HClient {
-        HClient { address: addr.into(), pid: 1, class: "c".into(), title: "t".into(), workspace: ws, workspace_name: ws.to_string(), floating: false, at, size: (100, 100), tags: vec![], hidden: false }
+        HClient { address: addr.into(), pid: 1, class: "c".into(), title: "t".into(), workspace: ws, workspace_name: ws.to_string(), floating: false, at, size: (100, 100), tags: vec![], hidden: false, fullscreen: 0 }
     }
 
     #[test]

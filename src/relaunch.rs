@@ -380,6 +380,7 @@ mod tests {
             size: (0, 0),
             tags: vec![],
             hidden: false,
+            fullscreen: 0,
         }
     }
 
