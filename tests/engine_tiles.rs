@@ -30,6 +30,8 @@ fn engine(name: &str) -> Engine<FakeHypr> {
     *h.clients.borrow_mut() = vec![client("0xa1", 1, "foot", 100001)];
     let mut e = Engine::new(s, Config::default(), h, "sig".into(), dir(name));
     e.exe = "cm".into();
+    // these tests are about keeping spots, which is opt-in (keep-spots off by default)
+    e.config.keep_spots = true;
     e
 }
 
@@ -480,4 +482,26 @@ fn spawned_pids_are_forgotten_once_their_windows_are_gone() {
     e.hypr().clients.borrow_mut().push(c);
     e.tick().unwrap();
     assert!(e.state.workspaces[&100001].tiles.iter().any(|t| t.address == "0xr"));
+}
+
+// ---- keep-spots off: moving or closing an app leaves no empty spot (2026-11-17) ----
+
+#[test]
+fn with_keep_spots_off_a_move_leaves_no_spot() {
+    let mut e = engine("nospotmove");
+    e.config.keep_spots = false;
+    *e.hypr().active.borrow_mut() = Some("0xa1".into());
+    e.handle(Request::Move { n: 2, follow: true });
+    assert!(e.hypr().spawned.borrow().is_empty());
+    assert_eq!(e.hypr().dispatched(), vec![move_window("0xa1", 100002, true)]);
+}
+
+#[test]
+fn with_keep_spots_off_a_close_leaves_no_spot() {
+    let mut e = engine("nospotclose");
+    e.config.keep_spots = false;
+    e.handle(Request::CloseWindow { address: "0xa1".into() });
+    really_close(&mut e, "0xa1");
+    assert!(e.hypr().spawned.borrow().is_empty());
+    assert_eq!(e.hypr().dispatched(), vec![close_window("0xa1")]);
 }

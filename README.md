@@ -59,13 +59,13 @@ Omarchy's workspace widget back, and deletes ymux's state. Only `~/.ymux.conf` i
 | Leader, `:` | Command prompt (`new <name>` creates a session) |
 | Leader, `$` / `,` | Rename the session / the workspace |
 | Leader, `.` | Renumber the workspace |
-| Leader, `o` | Options (relaunch on or off) |
+| Leader, `o` | Options: relaunch, and keep a moved or closed app's spot open (off by default) |
 | Leader, `q` | Number every visible tile; press a number to focus it |
 | Leader, `m` / `v` | Mark a tile / swap it with the marked one |
-| Leader, `x` or Super + W | Close the focused window, keeping its spot open |
+| Leader, `x` or Super + W | Close the focused window (its spot stays open with keep-spots on) |
 | Leader, then arrows with Super held | Resize the focused tile |
 | Super + 1-0 | Workspace 1-10 of the current session |
-| Super + Shift + 1-0 | Move the window there, leaving its spot open |
+| Super + Shift + 1-0 | Move the window there (its spot stays open with keep-spots on) |
 | Super + Shift + Alt + arrows | Move the session to another monitor |
 | Shift + Ctrl + Alt + H / L | Previous / next workspace |
 | Alt + Tab | Next window, skipping empty spots |
@@ -77,6 +77,7 @@ Omarchy's workspace widget back, and deletes ymux's state. Only `~/.ymux.conf` i
 ```
 set leader SUPER+B
 set relaunch on
+set keep-spots off
 bind w tree
 bind-global SHIFT+CTRL+ALT+L next-workspace
 launch-override steam "steam -silent"

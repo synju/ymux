@@ -69,6 +69,9 @@ pub struct Config {
     pub binds: Vec<(String, Action)>,
     pub global_binds: Vec<(String, Action)>,
     pub relaunch: bool,
+    /// Moving or closing an app leaves its spot open as a placeholder (opt-in,
+    /// user decision 2026-11-17).
+    pub keep_spots: bool,
     pub leader_timeout_ms: u32,
     pub display_panes_ms: u32,
     pub resize_step: u32,
@@ -99,6 +102,7 @@ impl Default for Config {
                 ("SHIFT+CTRL+ALT+L".into(), Action::NextWorkspace),
             ],
             relaunch: true,
+            keep_spots: false,
             leader_timeout_ms: 2000,
             display_panes_ms: 2000,
             resize_step: 50,
@@ -124,6 +128,7 @@ pub fn default_text() -> String {
     }
     s += "\n# options\n";
     s += &format!("set relaunch {}\n", if c.relaunch { "on" } else { "off" });
+    s += &format!("set keep-spots {}\n", if c.keep_spots { "on" } else { "off" });
     s += &format!("set leader-timeout {}\n", c.leader_timeout_ms);
     s += &format!("set display-panes-time {}\n", c.display_panes_ms);
     s += &format!("set resize-step {}\n", c.resize_step);
@@ -173,6 +178,13 @@ fn apply_line(c: &mut Config, line: &str) -> Result<(), String> {
             "leader" if b.is_empty() => return Err("set leader needs keys, e.g. SUPER+B".into()),
             "leader" if !valid_combo(b) => return Err(format!("unsupported key `{b}`")),
             "leader" => c.leader = b.to_string(),
+            "keep-spots" => {
+                c.keep_spots = match b {
+                    "on" => true,
+                    "off" => false,
+                    _ => return Err(format!("keep-spots must be on or off, got `{b}`")),
+                }
+            }
             "relaunch" => {
                 c.relaunch = match b {
                     "on" => true,
@@ -216,13 +228,18 @@ fn apply_line(c: &mut Config, line: &str) -> Result<(), String> {
 
 /// Rewrites only the `set relaunch` line (appending one if absent), keeping the rest.
 pub fn set_relaunch_line(text: &str, on: bool) -> String {
-    let want = format!("set relaunch {}", if on { "on" } else { "off" });
+    set_toggle_line(text, "relaunch", on)
+}
+
+/// Rewrites only the `set <key>` on/off line (appending one if absent), keeping the rest.
+pub fn set_toggle_line(text: &str, key: &str, on: bool) -> String {
+    let want = format!("set {key} {}", if on { "on" } else { "off" });
     let mut found = false;
     let mut out: Vec<String> = text
         .lines()
         .map(|l| {
             let t: Vec<&str> = l.split_whitespace().collect();
-            if t.len() >= 2 && t[0] == "set" && t[1] == "relaunch" {
+            if t.len() >= 2 && t[0] == "set" && t[1] == key {
                 found = true;
                 want.clone()
             } else {
@@ -331,5 +348,22 @@ mod tests {
         let c = Config::default();
         assert!(c.binds.iter().any(|(k, a)| k == "?" && *a == Action::Help));
         assert_eq!(Action::from_name("help"), Some(Action::Help));
+    }
+
+    #[test]
+    fn keep_spots_is_off_by_default_and_opt_in() {
+        assert!(!Config::default().keep_spots);
+        let (c, e) = parse("set keep-spots on\n");
+        assert!(e.is_empty());
+        assert!(c.keep_spots);
+        assert!(default_text().contains("set keep-spots off\n"));
+        assert!(!parse("set keep-spots maybe\n").1.is_empty());
+    }
+
+    #[test]
+    fn a_toggle_line_is_rewritten_alone() {
+        let out = set_toggle_line("# mine\nset keep-spots on\nset relaunch on\n", "keep-spots", false);
+        assert_eq!(out, "# mine\nset keep-spots off\nset relaunch on\n");
+        assert_eq!(set_toggle_line("set relaunch on\n", "keep-spots", true), "set relaunch on\nset keep-spots on\n");
     }
 }

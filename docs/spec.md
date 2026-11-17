@@ -443,9 +443,14 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
    - `new <name>`: the same, named `<name>`.
    Any other input shows `unknown command: <input>` in the prompt. Enter runs, Escape
    cancels.
-4. **Options modal (Leader, `o`):** v1 holds one setting:
-   - **Relaunch apps on restart:** on/off, default on.
-   Changing it rewrites that one line in `~/.ymux.conf` (section 6.3), leaving the
+4. **Options modal (Leader, `o`):** two settings; `j` / `k` or arrows choose, Space or
+   Enter toggles, Escape closes:
+   - **Relaunch apps on restart:** on/off, default on (`set relaunch`).
+   - **Keep a moved or closed app's spot open:** on/off, default **off**, opt-in
+     (`set keep-spots`, user decision 2026-11-17). When off, moving an app away or
+     closing it with Leader + `x` / Super + W leaves no placeholder: the other tiles
+     fill the space (section 5.7).
+   Changing one rewrites that one line in `~/.ymux.conf` (section 6.3), leaving the
    rest of the file, including comments, as it was.
 5. **Tile numbers (Leader, `q`),** like tmux's `prefix + q` (`display-panes`):
    - every visible tile on every monitor, placeholders included, gets a large number
@@ -494,9 +499,10 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
      Window rules in `ymux.lua` give it no border, no shadow, no blur and no
      decoration. The daemon tracks each one (pid, window address, workspace).
    - **Where one appears** (user decision 2026-11-15):
-     - when an app leaves its spot through a ymux move (Super + Shift + 1-0 or
-       Super + Shift + Alt + 1-0);
-     - when a tiled app is closed with Leader + `x` or Super + W (user decisions
+     - with `keep-spots` on only (section 5.4): when an app leaves its spot through a
+       ymux move (Super + Shift + 1-0 or Super + Shift + Alt + 1-0);
+     - with `keep-spots` on only: when a tiled app is closed with Leader + `x` or
+       Super + W (user decisions
        2026-11-15 and 2026-11-16): ymux records the workspace's layout and asks the app
        to close where it is, with no time limit, so a question the app asks first shows
        in place. When the app's window has really closed, a placeholder is opened,

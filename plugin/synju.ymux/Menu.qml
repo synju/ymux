@@ -83,6 +83,7 @@ Item {
       visible: root.view === "options"
       active: panel.shown && visible
       relaunch: (root.service && root.service.view) ? root.service.view.relaunch : true
+      keepSpots: (root.service && root.service.view) ? !!root.service.view.keep_spots : false
       exe: root.exe
       onDone: root.finish()
     }

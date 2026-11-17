@@ -271,3 +271,18 @@ fn cycle_skips_placeholders_and_hidden_windows_and_wraps() {
         vec!["hl.dsp.window.alter_zorder({ mode = \"bottom\" })".to_string(), focus_window("0x2")]
     );
 }
+
+#[test]
+fn set_keep_spots_rewrites_only_that_line_and_shows_in_the_view() {
+    let d = std::env::temp_dir().join(format!("ymux-keepspots-{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    let f = d.join("ymux.conf");
+    std::fs::write(&f, "# mine\nset relaunch on\n").unwrap();
+    let mut e = engine();
+    e.config_path = f.clone();
+    assert!(!e.view().unwrap().keep_spots, "opt-in");
+    assert!(e.handle(Request::SetKeepSpots { on: true }).ok);
+    assert_eq!(std::fs::read_to_string(&f).unwrap(), "# mine\nset relaunch on\nset keep-spots on\n");
+    assert!(e.config.keep_spots);
+    assert!(e.view().unwrap().keep_spots);
+}

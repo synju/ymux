@@ -77,8 +77,9 @@ impl<H: Hypr> Engine<H> {
     /// Spec 2 takeovers 2-3: leave a placeholder where the app was (tiled and
     /// scrolling workspaces), then deliver the app to the target.
     pub fn move_app(&mut self, app: &str, source: i64, target: i64, follow: bool) -> Result<()> {
-        // a special workspace (scratchpad, console) keeps no spot
-        if source > 0 && self.wants_placeholder(source)? {
+        // a special workspace (scratchpad, console) keeps no spot; nor does anything
+        // with keep-spots off (opt-in, 2026-11-17)
+        if self.config.keep_spots && source > 0 && self.wants_placeholder(source)? {
             self.spawn_placeholder(JobKind::LeaveSpot { app: app.into(), source, target, follow })
         } else {
             self.deliver(app, target, follow)
@@ -221,6 +222,7 @@ impl<H: Hypr> Engine<H> {
             .values()
             .find_map(|w| w.tiles.iter().find(|t| t.address == app).map(|t| (w.real_id, t.is_placeholder() || t.floating)));
         if let Some((ws, false)) = hit
+            && self.config.keep_spots
             && self.wants_placeholder(ws)?
         {
             // the layout as it stands now, to give the spot back exactly

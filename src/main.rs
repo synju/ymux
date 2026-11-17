@@ -32,6 +32,7 @@ fn parse_request(args: &[String]) -> Option<Request> {
         "focus-monitor" => Request::FocusMonitor { connector: args.get(1)?.clone() },
         "command" => Request::Command { line: args.get(1..).unwrap_or_default().join(" ") },
         "set-relaunch" => Request::SetRelaunch { on: args.get(1)? == "on" },
+        "set-keep-spots" => Request::SetKeepSpots { on: args.get(1)? == "on" },
         "fold" => Request::Fold { key: args.get(1)?.clone(), folded: args.get(2)? == "on" },
         "kill-session" => Request::KillSession { number: n(1)? },
         "kill-workspace" => Request::KillWorkspace { id: args.get(1)?.parse().ok()? },

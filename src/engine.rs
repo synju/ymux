@@ -53,6 +53,8 @@ pub enum Request {
     /// Command prompt line (spec 5.3).
     Command { line: String },
     SetRelaunch { on: bool },
+    /// Moving or closing an app leaves its spot open (opt-in).
+    SetKeepSpots { on: bool },
     /// Remember a Leader + w tree row as folded or unfolded.
     Fold { key: String, folded: bool },
     KillSession { number: u32 },
@@ -175,6 +177,7 @@ impl<H: Hypr> Engine<H> {
             focused_address: self.focused.clone(),
             submap: self.submap.clone(),
             relaunch: self.config.relaunch,
+            keep_spots: self.config.keep_spots,
         };
         Ok(crate::view::build(&self.state, &live))
     }
@@ -515,6 +518,12 @@ impl<H: Hypr> Engine<H> {
                     self.dirty = true;
                     self.view_changed = true;
                 }
+            }
+            Request::SetKeepSpots { on } => {
+                let text = std::fs::read_to_string(&self.config_path).unwrap_or_else(|_| crate::config::default_text());
+                crate::store::write_atomic(&self.config_path, &crate::config::set_toggle_line(&text, "keep-spots", on))?;
+                self.config.keep_spots = on;
+                self.view_changed = true;
             }
             Request::SetRelaunch { on } => {
                 let text = std::fs::read_to_string(&self.config_path).unwrap_or_else(|_| crate::config::default_text());

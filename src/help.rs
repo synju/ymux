@@ -31,7 +31,7 @@ fn describe(a: Action) -> &'static str {
         Action::DisplayPanes => "Number every visible tile; press one to focus it",
         Action::Mark => "Mark the focused tile",
         Action::Swap => "Swap the focused tile with the marked one",
-        Action::KillTile => "Close the focused window, keeping its spot",
+        Action::KillTile => "Close the focused window",
         Action::PreviousWorkspace => "Previous workspace",
         Action::NextWorkspace => "Next workspace",
         Action::MoveWorkspace => "Renumber the workspace",
@@ -41,22 +41,26 @@ fn describe(a: Action) -> &'static str {
 
 /// The `help` view's payload: groups of `[keys, what they do]`.
 pub fn help_payload(cfg: &Config) -> Value {
-    let mut leader: Vec<Value> = cfg.binds.iter().map(|(k, a)| json!([k, describe(*a)])).collect();
+    // moves and closes keep the spot only with keep-spots on (opt-in)
+    let spot = |d: &str| if cfg.keep_spots { format!("{d}, keeping its spot") } else { d.to_string() };
+    let text = |a: Action| if a == Action::KillTile { spot(describe(a)) } else { describe(a).to_string() };
+    let mut leader: Vec<Value> = cfg.binds.iter().map(|(k, a)| json!([k, text(*a)])).collect();
     leader.push(json!(["arrows, Super held", "Resize the focused tile"]));
     leader.push(json!(["Escape", "Leave leader mode"]));
-    let mut anywhere: Vec<Value> = cfg.global_binds.iter().map(|(k, a)| json!([pretty_combo(k), describe(*a)])).collect();
+    let mut anywhere: Vec<Value> = cfg.global_binds.iter().map(|(k, a)| json!([pretty_combo(k), text(*a)])).collect();
     // the takeovers in ymux.lua (spec 2), always present
     for (k, d) in [
         ("Super + 1-0", "Workspace 1-10 of the current session"),
-        ("Super + Shift + 1-0", "Move the window there, keeping its spot"),
+        ("Super + Shift + 1-0", "Move the window there"),
         ("Super + Shift + Alt + 1-0", "Move the window there without following"),
         ("Super + Tab / Super + Shift + Tab", "Next / previous workspace"),
         ("Super + Ctrl + Tab", "The workspace you were on before"),
         ("Super + scroll", "Next / previous workspace"),
         ("Super + Shift + Alt + arrows", "Move the session to another monitor"),
         ("Alt + Tab / Alt + Shift + Tab", "Next / previous window, skipping empty spots"),
-        ("Super + W", "Close the focused window, keeping its spot"),
+        ("Super + W", "Close the focused window"),
     ] {
+        let d = if k == "Super + W" || k == "Super + Shift + 1-0" { spot(d) } else { d.to_string() };
         anywhere.push(json!([k, d]));
     }
     let tree: Vec<Value> = [
@@ -124,7 +128,8 @@ mod tests {
         let any = rows(&p, "Anywhere");
         assert!(any.contains(&("Shift + Ctrl + Alt + L", "Next workspace")));
         assert!(any.contains(&("Super + 1-0", "Workspace 1-10 of the current session")));
-        assert!(any.contains(&("Super + W", "Close the focused window, keeping its spot")));
+        // keep-spots is off by default: no promise of a kept spot
+        assert!(any.contains(&("Super + W", "Close the focused window")));
         let tree = rows(&p, "In the tree");
         assert!(tree.contains(&("r", "Rename the selected row")));
     }
@@ -133,5 +138,13 @@ mod tests {
     fn combos_read_like_the_docs() {
         assert_eq!(pretty_combo("SUPER+B"), "Super + B");
         assert_eq!(pretty_combo("SHIFT+CTRL+ALT+H"), "Shift + Ctrl + Alt + H");
+    }
+
+    #[test]
+    fn with_keep_spots_on_the_list_says_the_spot_stays() {
+        let c = Config { keep_spots: true, ..Config::default() };
+        let p = help_payload(&c);
+        assert!(rows(&p, "Anywhere").contains(&("Super + W", "Close the focused window, keeping its spot")));
+        assert!(rows(&p, "Leader").contains(&("x", "Close the focused window, keeping its spot")));
     }
 }
