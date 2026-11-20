@@ -86,6 +86,32 @@ function promptTitle(payload) {
 // Flattened rows: monitor > session > workspace > tile, children of a collapsed
 // key omitted. `current` marks the focused monitor, active session, shown workspace
 // and focused tile.
+// The options card's actions work on the focused monitor's current workspace and
+// session; `sessions` are the ones a workspace can move to (every monitor, not this one).
+function actionContext(view) {
+  var tree = (view && view.tree) || []
+  var all = []
+  var here = null
+  for (var i = 0; i < tree.length; i++) {
+    var m = tree[i]
+    for (var j = 0; j < m.sessions.length; j++) {
+      var s = m.sessions[j]
+      all.push({ number: s.number, label: s.label, monitor: m.connector })
+      if (!m.focused || !s.active) continue
+      var apps = 0, ws = null
+      for (var k = 0; k < s.workspaces.length; k++) {
+        var w = s.workspaces[k]
+        apps += w.tiles.length
+        if (w.shown) ws = { id: w.id, number: w.number, name: w.name || "", label: w.label, apps: w.tiles.length }
+      }
+      if (ws) here = { workspace: ws, session: { number: s.number, name: s.name || "", label: s.label, apps: apps, workspaces: s.workspaces.length } }
+    }
+  }
+  if (!here) return null
+  here.sessions = all.filter(function(x) { return x.number !== here.session.number })
+  return here
+}
+
 // A scrollbar handle for a list showing `ratio` of its content from `pos` (both
 // 0-1, as ListView.visibleArea gives them): at least 24 px, kept inside the track.
 function scrollThumb(pos, ratio, track) {

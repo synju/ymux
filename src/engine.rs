@@ -55,6 +55,10 @@ pub enum Request {
     SetRelaunch { on: bool },
     /// Moving or closing an app leaves its spot open (opt-in).
     SetKeepSpots { on: bool },
+    /// Empty workspaces and sessions close by themselves (opt-in).
+    SetAutoClose { on: bool },
+    /// Move a workspace into another session (lowest free number there).
+    MoveWorkspaceToSession { id: i64, session: u32 },
     /// Remember a Leader + w tree row as folded or unfolded.
     Fold { key: String, folded: bool },
     KillSession { number: u32 },
@@ -130,6 +134,9 @@ pub struct Engine<H: Hypr> {
     pub(crate) restore: Option<crate::relaunch::Restore>,
     /// Workspaces a placeholder job is working on: never deleted mid-job.
     pub(crate) busy: HashSet<i64>,
+    /// Workspaces asked to close (tree or options card): removed once empty and left,
+    /// whatever auto-close says.
+    pub(crate) doomed: HashSet<i64>,
 }
 
 impl<H: Hypr> Engine<H> {
@@ -157,6 +164,7 @@ impl<H: Hypr> Engine<H> {
             restore: None,
             last_close: None,
             busy: HashSet::new(),
+            doomed: HashSet::new(),
         }
     }
 
@@ -178,6 +186,7 @@ impl<H: Hypr> Engine<H> {
             submap: self.submap.clone(),
             relaunch: self.config.relaunch,
             keep_spots: self.config.keep_spots,
+            auto_close: self.config.auto_close,
         };
         Ok(crate::view::build(&self.state, &live))
     }
@@ -210,7 +219,7 @@ impl<H: Hypr> Engine<H> {
     }
 
     /// Makes `session` its monitor's active session and bumps its recency.
-    fn activate(&mut self, session: u32) {
+    pub(crate) fn activate(&mut self, session: u32) {
         let next = self.state.sessions.values().map(|s| s.last_used).max().unwrap_or(0) + 1;
         let monitor = {
             let s = self.state.sessions.get_mut(&session).expect("known session");
@@ -228,7 +237,7 @@ impl<H: Hypr> Engine<H> {
         self.hypr.spawn(&crate::overlay::summon_argv(&payload), None).map(|_| ())
     }
 
-    fn focus(&self, id: i64) -> Result<()> {
+    pub(crate) fn focus(&self, id: i64) -> Result<()> {
         self.hypr.dispatch(&focus_workspace(id))
     }
 
@@ -519,6 +528,13 @@ impl<H: Hypr> Engine<H> {
                     self.view_changed = true;
                 }
             }
+            Request::SetAutoClose { on } => {
+                let text = std::fs::read_to_string(&self.config_path).unwrap_or_else(|_| crate::config::default_text());
+                crate::store::write_atomic(&self.config_path, &crate::config::set_toggle_line(&text, "auto-close", on))?;
+                self.config.auto_close = on;
+                self.view_changed = true;
+            }
+            Request::MoveWorkspaceToSession { id, session } => return self.move_workspace_to_session(id, session),
             Request::SetKeepSpots { on } => {
                 let text = std::fs::read_to_string(&self.config_path).unwrap_or_else(|_| crate::config::default_text());
                 crate::store::write_atomic(&self.config_path, &crate::config::set_toggle_line(&text, "keep-spots", on))?;
@@ -877,6 +893,10 @@ impl<H: Hypr> Engine<H> {
         if self.busy.contains(&id) || !ws.tiles.is_empty() || self.shown_ids()?.contains(&id) || self.minimized_from(id)? {
             return Ok(());
         }
+        // with auto-close off (the default) only a workspace asked to close goes
+        if !self.config.auto_close && !self.doomed.contains(&id) {
+            return Ok(());
+        }
         self.delete_workspace(id)
     }
 
@@ -884,6 +904,7 @@ impl<H: Hypr> Engine<H> {
     fn delete_workspace(&mut self, id: i64) -> Result<()> {
         let Some(ws) = self.state.workspaces.remove(&id) else { return Ok(()) };
         self.dirty = true;
+        self.doomed.remove(&id);
         self.state.folded.remove(&format!("w:{id}"));
         delete_mode_file(&self.layouts_dir, id)?;
         for w in self.state.workspaces.values_mut() {
@@ -902,7 +923,7 @@ impl<H: Hypr> Engine<H> {
         Ok(())
     }
 
-    fn delete_session(&mut self, number: u32) {
+    pub(crate) fn delete_session(&mut self, number: u32) {
         let Some(s) = self.state.sessions.remove(&number) else { return };
         self.dirty = true;
         self.state.folded.remove(&format!("s:{number}"));
@@ -1156,7 +1177,7 @@ impl<H: Hypr> Engine<H> {
     }
 
     /// The workspace to show for a session: its last shown, else its lowest.
-    fn show_target(&self, session: u32) -> Option<i64> {
+    pub(crate) fn show_target(&self, session: u32) -> Option<i64> {
         self.state
             .sessions
             .get(&session)?
@@ -1371,6 +1392,7 @@ impl<H: Hypr> Engine<H> {
         for a in &addresses {
             self.hypr.dispatch(&close_window(a))?;
         }
+        self.doomed.extend(ids.iter().copied());
         // killing drops a saved floating layout (spec 5.6, 5.7)
         for id in &ids {
             if let Some(w) = self.state.workspaces.get_mut(id) {
@@ -1407,7 +1429,7 @@ impl<H: Hypr> Engine<H> {
     /// Killing the monitor's active session switches it to its most recently used
     /// other session, or to a new `main` (spec 5.6).
     fn finish_kill(&mut self, job: KillJob) -> Result<()> {
-        let Some((monitor, killed)) = job.switch_monitor else { return Ok(()) };
+        let Some((monitor, killed)) = job.switch_monitor else { return self.leave_doomed() };
         let next = self
             .state
             .sessions

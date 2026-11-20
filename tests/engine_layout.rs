@@ -1,5 +1,4 @@
 mod common;
-use ymux::config::Config;
 use ymux::engine::Engine;
 use ymux::events::Event;
 use ymux::hypr::change_id;
@@ -31,7 +30,7 @@ fn engine(layouts: PathBuf) -> Engine<FakeHypr> {
     *h.monitors.borrow_mut() = vec![monitor("DP-1", "LG A", 0, true, 100001)];
     *h.workspaces.borrow_mut() = vec![workspace(100001, "DP-1", 0), workspace(100002, "DP-1", 1)];
     *h.clients.borrow_mut() = vec![client("0xa2", 12, "foot", 100002)];
-    Engine::new(s, Config::default(), h, "sig".into(), layouts)
+    Engine::new(s, auto_close(), h, "sig".into(), layouts)
 }
 
 #[test]

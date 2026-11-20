@@ -443,15 +443,34 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
    - `new <name>`: the same, named `<name>`.
    Any other input shows `unknown command: <input>` in the prompt. Enter runs, Escape
    cancels.
-4. **Options modal (Leader, `o`):** two settings; `j` / `k` or arrows choose, Space or
-   Enter toggles, Escape closes:
-   - **Relaunch apps on restart:** on/off, default on (`set relaunch`).
-   - **Keep a moved or closed app's spot open:** on/off, default **off**, opt-in
-     (`set keep-spots`, user decision 2026-11-17). When off, moving an app away or
-     closing it with Leader + `x` / Super + W leaves no placeholder: the other tiles
-     fill the space (section 5.7).
-   Changing one rewrites that one line in `~/.ymux.conf` (section 6.3), leaving the
-   rest of the file, including comments, as it was.
+4. **Options card (Leader, `o`):** two sections, kept apart (user decisions 2026-11-17
+   and 2026-11-18). `j` / `k` or arrows move through both, Space or Enter toggles or
+   runs, Escape closes.
+   - **Options:**
+     - **Relaunch apps on restart:** on/off, default on (`set relaunch`).
+     - **Keep a moved or closed app's spot open:** on/off, default **off**, opt-in
+       (`set keep-spots`). When off, moving an app away or closing it with Leader +
+       `x` / Super + W leaves no placeholder: the other tiles fill the space (section
+       5.7).
+     - **Close empty workspaces and sessions automatically:** on/off, default **off**,
+       opt-in (`set auto-close`). When off, an empty workspace stays, even a session's
+       only one, until it is closed from this card or the tree; when on, the rules of
+       section 5.6 apply.
+     Changing one rewrites that one line in `~/.ymux.conf` (section 6.3), leaving the
+     rest of the file, including comments, as it was.
+   - **Actions** (on the focused monitor's current workspace and session):
+     - **Rename workspace** and **Rename session:** open the rename prompt (item 2).
+     - **Renumber workspace:** opens the number prompt (Leader + `.`).
+     - **Move workspace to another session:** lists the other sessions, on every
+       monitor; the workspace takes the lowest free number there. To a session on
+       another monitor it moves with Hyprland and takes an id in that monitor's range.
+       A session left without workspaces goes.
+     - **Close workspace** and **Close session** (its workspaces and apps): when they
+       hold apps, ask `Close ... and its N apps? (y/n)` first. Closing the workspace on
+       screen moves the monitor to the session's other workspace (its previous one
+       first), or, for a session's only workspace, to the monitor's most recent other
+       session (or a new `main`); the closed workspace goes once left. Closing works
+       whatever `auto-close` says.
 5. **Tile numbers (Leader, `q`),** like tmux's `prefix + q` (`display-panes`):
    - every visible tile on every monitor, placeholders included, gets a large number
      drawn over it;
@@ -470,7 +489,8 @@ All overlays are views of the one `menu` entry point (section 3, item 3).
      placeholder keeps its spot (section 5.7). An app that asks first (Brave's "close 2
      tabs?", an unsaved-changes dialog) stays where it is, untouched, for as long as it
      takes; cancelled, nothing changes.
-   - **Workspace:** deletion is **event-driven**, never a sweep: a workspace is deleted
+   - **Workspace:** with `auto-close` on (section 5.4; off by default), deletion is
+     **event-driven**, never a sweep: a workspace is deleted
      when its last tile closes or moves away, or when it is left (stops being shown)
      while it has no tiles, even if it was renamed (tmux closes a window when its last
      pane exits). A workspace that is restored empty (relaunch off, section 7.5, or all

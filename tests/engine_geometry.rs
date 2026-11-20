@@ -1,5 +1,4 @@
 mod common;
-use ymux::config::Config;
 use ymux::engine::Engine;
 use ymux::model::{State, Tile};
 use common::*;
@@ -30,7 +29,7 @@ fn engine(layouts: PathBuf) -> Engine<FakeHypr> {
     *h.monitors.borrow_mut() = vec![monitor("DP-1", "LG A", 0, true, 100001)];
     *h.workspaces.borrow_mut() = vec![workspace(100001, "DP-1", 1), workspace(100002, "DP-1", 1)];
     *h.clients.borrow_mut() = vec![client("0xa1", 1, "foot", 100001), client("0xa2", 1, "foot", 100002)];
-    Engine::new(s, Config::default(), h, "sig".into(), layouts)
+    Engine::new(s, auto_close(), h, "sig".into(), layouts)
 }
 
 fn set_live(e: &Engine<FakeHypr>, addr: &str, at: (i32, i32), size: (i32, i32), floating: bool) {

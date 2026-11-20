@@ -32,6 +32,8 @@ fn engine(name: &str) -> Engine<FakeHypr> {
     e.exe = "cm".into();
     // these tests are about keeping spots, which is opt-in (keep-spots off by default)
     e.config.keep_spots = true;
+    // and about empty workspaces going by themselves (auto-close is opt-in too)
+    e.config.auto_close = true;
     e
 }
 

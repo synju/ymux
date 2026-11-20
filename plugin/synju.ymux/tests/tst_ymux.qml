@@ -194,4 +194,29 @@ TestCase {
     compare(t.y, 376)
     compare(Ymux.scrollThumb(0, 1, 400).visible, false)
   }
+
+  function test_action_context_is_the_focused_monitors_current_workspace() {
+    var view = { tree: [
+      { connector: "DP-1", description: "A", focused: false, sessions: [
+        { number: 3, label: "side", name: "side", active: true, workspaces: [
+          { id: 200001, number: 1, label: "1", name: null, shown: true, tiles: [] }] }] },
+      { connector: "eDP-2", description: "B", focused: true, sessions: [
+        { number: 1, label: "work", name: "work", active: true, workspaces: [
+          { id: 100001, number: 1, label: "code 1", name: "code", shown: false, tiles: [{ address: "0x1" }] },
+          { id: 100002, number: 2, label: "2", name: null, shown: true, tiles: [{ address: "0x2" }, { address: "0x3" }] }] },
+        { number: 2, label: "play", name: "play", active: false, workspaces: [
+          { id: 100003, number: 1, label: "1", name: null, shown: false, tiles: [] }] }] }] }
+    var c = Ymux.actionContext(view)
+    compare(c.workspace.id, 100002)
+    compare(c.workspace.name, "")
+    compare(c.workspace.apps, 2)
+    compare(c.session.number, 1)
+    compare(c.session.apps, 3)
+    compare(c.session.workspaces, 2)
+    // other sessions to move to, on every monitor, not the current one
+    compare(c.sessions.length, 2)
+    compare(c.sessions[0].number, 3)
+    compare(c.sessions[1].number, 2)
+    compare(Ymux.actionContext({ tree: [] }), null)
+  }
 }

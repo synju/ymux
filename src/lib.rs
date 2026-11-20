@@ -18,3 +18,4 @@ pub mod archive;
 pub mod relaunch;
 pub mod help;
 pub mod messages;
+pub mod workspaces;

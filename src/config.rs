@@ -72,6 +72,9 @@ pub struct Config {
     /// Moving or closing an app leaves its spot open as a placeholder (opt-in,
     /// user decision 2026-11-17).
     pub keep_spots: bool,
+    /// Empty workspaces (and their sessions) close by themselves (opt-in, user
+    /// decision 2026-11-18); off, they stay until closed from the options card or tree.
+    pub auto_close: bool,
     pub leader_timeout_ms: u32,
     pub display_panes_ms: u32,
     pub resize_step: u32,
@@ -103,6 +106,7 @@ impl Default for Config {
             ],
             relaunch: true,
             keep_spots: false,
+            auto_close: false,
             leader_timeout_ms: 2000,
             display_panes_ms: 2000,
             resize_step: 50,
@@ -129,6 +133,7 @@ pub fn default_text() -> String {
     s += "\n# options\n";
     s += &format!("set relaunch {}\n", if c.relaunch { "on" } else { "off" });
     s += &format!("set keep-spots {}\n", if c.keep_spots { "on" } else { "off" });
+    s += &format!("set auto-close {}\n", if c.auto_close { "on" } else { "off" });
     s += &format!("set leader-timeout {}\n", c.leader_timeout_ms);
     s += &format!("set display-panes-time {}\n", c.display_panes_ms);
     s += &format!("set resize-step {}\n", c.resize_step);
@@ -178,6 +183,13 @@ fn apply_line(c: &mut Config, line: &str) -> Result<(), String> {
             "leader" if b.is_empty() => return Err("set leader needs keys, e.g. SUPER+B".into()),
             "leader" if !valid_combo(b) => return Err(format!("unsupported key `{b}`")),
             "leader" => c.leader = b.to_string(),
+            "auto-close" => {
+                c.auto_close = match b {
+                    "on" => true,
+                    "off" => false,
+                    _ => return Err(format!("auto-close must be on or off, got `{b}`")),
+                }
+            }
             "keep-spots" => {
                 c.keep_spots = match b {
                     "on" => true,

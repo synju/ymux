@@ -84,6 +84,9 @@ Item {
       active: panel.shown && visible
       relaunch: (root.service && root.service.view) ? root.service.view.relaunch : true
       keepSpots: (root.service && root.service.view) ? !!root.service.view.keep_spots : false
+      autoClose: (root.service && root.service.view) ? !!root.service.view.auto_close : false
+      view: root.service ? root.service.view : null
+      onOpenPayload: function(payload) { root.payload = payload }
       exe: root.exe
       onDone: root.finish()
     }

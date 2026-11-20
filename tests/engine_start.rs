@@ -1,5 +1,4 @@
 mod common;
-use ymux::config::Config;
 use ymux::engine::{Engine, StartKind};
 use ymux::hypr::{change_id, focus_monitor, focus_workspace};
 use ymux::layout::read_mode;
@@ -43,7 +42,7 @@ fn nums(e: &Engine<FakeHypr>, s: u32) -> Vec<u32> {
 
 #[test]
 fn adoption_keeps_slots_and_makes_main_per_monitor() {
-    let mut e = Engine::new(State::default(), Config::default(), live(), "sig".into(), dir("adopt"));
+    let mut e = Engine::new(State::default(), auto_close(), live(), "sig".into(), dir("adopt"));
     assert_eq!(e.start().unwrap(), StartKind::Adopted);
     let boe = session_named(&e, "main", "BOE");
     let hkc = session_named(&e, "main", "HKC");
@@ -63,7 +62,7 @@ fn adoption_keeps_slots_and_makes_main_per_monitor() {
 fn adoption_keeps_scrolling_mode() {
     let d = dir("scroll");
     fs::write(d.join("1.lua"), "o.workspace_mode({ workspace = \"1\", mode = \"scrolling\" })\n").unwrap();
-    let mut e = Engine::new(State::default(), Config::default(), live(), "sig".into(), d.clone());
+    let mut e = Engine::new(State::default(), auto_close(), live(), "sig".into(), d.clone());
     e.start().unwrap();
     assert!(!d.join("1.lua").exists());
     assert_eq!(read_mode(&d, 100001, None, || None), "scrolling");
@@ -75,7 +74,7 @@ fn adoption_collision_takes_lowest_free_number() {
     // guest 2 from an unplugged monitor sits on DP-1 next to 12: both map to number 2
     h.workspaces.borrow_mut().push(workspace(2, "DP-1", 1));
     h.clients.borrow_mut().push(client("0x8", 8, "foot", 2));
-    let mut e = Engine::new(State::default(), Config::default(), h, "sig".into(), dir("collide"));
+    let mut e = Engine::new(State::default(), auto_close(), h, "sig".into(), dir("collide"));
     e.start().unwrap();
     let hkc = session_named(&e, "main", "HKC");
     assert_eq!(nums(&e, hkc), vec![1, 2, 3, 4]);
@@ -83,7 +82,7 @@ fn adoption_collision_takes_lowest_free_number() {
 
 /// State as the daemon saved it in this Hyprland session ("sig"), after adoption.
 fn adopted_state() -> State {
-    let mut e = Engine::new(State::default(), Config::default(), live(), "sig".into(), dir("base"));
+    let mut e = Engine::new(State::default(), auto_close(), live(), "sig".into(), dir("base"));
     e.start().unwrap();
     e.state
 }
@@ -102,7 +101,7 @@ fn live_after() -> FakeHypr {
 
 #[test]
 fn restart_keeps_sessions_and_does_not_relaunch_or_land() {
-    let mut e = Engine::new(adopted_state(), Config::default(), live_after(), "sig".into(), dir("r1"));
+    let mut e = Engine::new(adopted_state(), auto_close(), live_after(), "sig".into(), dir("r1"));
     assert_eq!(e.start().unwrap(), StartKind::Restarted);
     assert!(e.hypr().dispatched().is_empty());
     assert_eq!(e.state.workspaces[&200001].tiles.len(), 2);
@@ -112,7 +111,7 @@ fn restart_keeps_sessions_and_does_not_relaunch_or_land() {
 fn restart_matches_by_address_and_pid() {
     let mut s = adopted_state();
     s.workspaces.get_mut(&200002).unwrap().tiles[0].pid = Some(999); // same address, other pid
-    let mut e = Engine::new(s, Config::default(), live_after(), "sig".into(), dir("r2"));
+    let mut e = Engine::new(s, auto_close(), live_after(), "sig".into(), dir("r2"));
     e.start().unwrap();
     let t: &Tile = &e.state.workspaces[&200002].tiles[0];
     assert_eq!(t.pid, Some(5));
@@ -124,7 +123,7 @@ fn restart_drops_closed_apps_and_deletes_unshown_empty_workspace() {
     let h = live_after();
     h.clients.borrow_mut().retain(|c| c.address != "0x6"); // spotify closed while down
     h.workspaces.borrow_mut().retain(|w| w.id != 200003);
-    let mut e = Engine::new(adopted_state(), Config::default(), h, "sig".into(), dir("r3"));
+    let mut e = Engine::new(adopted_state(), auto_close(), h, "sig".into(), dir("r3"));
     e.start().unwrap();
     assert!(!e.state.workspaces.contains_key(&200003));
 }
@@ -133,7 +132,7 @@ fn restart_drops_closed_apps_and_deletes_unshown_empty_workspace() {
 fn restart_records_new_window_on_known_workspace() {
     let h = live_after();
     h.clients.borrow_mut().push(client("0xcd", 40, "foot", 200001));
-    let mut e = Engine::new(adopted_state(), Config::default(), h, "sig".into(), dir("r4"));
+    let mut e = Engine::new(adopted_state(), auto_close(), h, "sig".into(), dir("r4"));
     e.start().unwrap();
     assert!(e.state.workspaces[&200001].tiles.iter().any(|t| t.address == "0xcd"));
     assert_eq!(e.state.workspaces.len(), 4);
@@ -144,7 +143,7 @@ fn restart_adopts_unknown_workspace_into_its_monitors_active_session() {
     let h = live_after();
     h.workspaces.borrow_mut().push(workspace(4, "DP-1", 1));
     h.clients.borrow_mut().push(client("0xee", 41, "foot", 4));
-    let mut e = Engine::new(adopted_state(), Config::default(), h, "sig".into(), dir("r5"));
+    let mut e = Engine::new(adopted_state(), auto_close(), h, "sig".into(), dir("r5"));
     e.start().unwrap();
     assert!(e.hypr().dispatched().contains(&change_id(4, 200004)));
     let hkc = session_named(&e, "main", "HKC");
@@ -160,7 +159,7 @@ fn hyprland_started_lands_each_monitor_on_last_shown_first() {
     let mut s = adopted_state();
     let hkc = s.sessions.values().find(|x| x.monitor == "HKC").unwrap().number;
     s.sessions.get_mut(&hkc).unwrap().last_shown = Some(200002);
-    let mut e = Engine::new(s, Config::default(), h, "new-sig".into(), dir("hs"));
+    let mut e = Engine::new(s, auto_close(), h, "new-sig".into(), dir("hs"));
     assert_eq!(e.start().unwrap(), StartKind::HyprlandStarted);
     let d = e.hypr().dispatched();
     assert_eq!(d[..4], [focus_monitor("eDP-2"), focus_workspace(100001), focus_monitor("DP-1"), focus_workspace(200002)]);
@@ -171,7 +170,7 @@ fn hyprland_started_lands_each_monitor_on_last_shown_first() {
 
 #[test]
 fn signature_saved_after_start() {
-    let mut e = Engine::new(State::default(), Config::default(), live(), "sig-x".into(), dir("sig"));
+    let mut e = Engine::new(State::default(), auto_close(), live(), "sig-x".into(), dir("sig"));
     e.start().unwrap();
     assert_eq!(e.state.signature.as_deref(), Some("sig-x"));
     assert!(e.take_dirty());
@@ -184,7 +183,7 @@ fn adoption_records_tiles_when_hyprland_already_reports_new_ids() {
     for c in h.clients.borrow_mut().iter_mut() {
         c.workspace = match c.workspace { 1 => 100001, 12 => 200001, 13 => 200002, 14 => 200003, o => o };
     }
-    let mut e = Engine::new(State::default(), Config::default(), h, "sig".into(), dir("newids"));
+    let mut e = Engine::new(State::default(), auto_close(), h, "sig".into(), dir("newids"));
     e.start().unwrap();
     assert_eq!(e.state.workspaces[&200001].tiles.len(), 2);
     assert_eq!(e.state.workspaces[&100001].tiles.len(), 2);
@@ -195,7 +194,7 @@ fn restart_keeps_unshown_workspaces_that_were_already_empty() {
     let mut s = adopted_state();
     let hkc = s.sessions.values().find(|x| x.monitor == "HKC").unwrap().number;
     let kept = s.create_workspace(hkc); // restored-empty, never shown since
-    let mut e = Engine::new(s, Config::default(), live_after(), "sig".into(), dir("r6"));
+    let mut e = Engine::new(s, auto_close(), live_after(), "sig".into(), dir("r6"));
     e.start().unwrap();
     assert!(e.state.workspaces.contains_key(&kept));
 }

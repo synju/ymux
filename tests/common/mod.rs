@@ -79,6 +79,12 @@ impl Hypr for FakeHypr {
     }
 }
 
+/// The config of tests written before auto-close became opt-in (2026-11-18): they are
+/// about empty workspaces going by themselves.
+pub fn auto_close() -> ymux::config::Config {
+    ymux::config::Config { auto_close: true, ..Default::default() }
+}
+
 /// A layouts folder of its own for every engine a test builds: tests run in parallel,
 /// and a shared folder let one test read another's half-written mode file.
 pub fn unique_dir(tag: &str) -> std::path::PathBuf {

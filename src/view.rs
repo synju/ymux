@@ -6,8 +6,9 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug, PartialEq)]
 pub struct View {
-    /// The options card's second toggle (spec 5.4).
+    /// The options card's toggles (spec 5.4).
     pub keep_spots: bool,
+    pub auto_close: bool,
     /// Folded tree rows (spec 5.1), so the tree opens as it was left.
     pub folded: Vec<String>,
     pub mode: String,
@@ -84,6 +85,7 @@ pub struct Live {
     pub submap: String,
     pub relaunch: bool,
     pub keep_spots: bool,
+    pub auto_close: bool,
 }
 
 pub fn mode_name(submap: &str) -> &'static str {
@@ -190,6 +192,7 @@ pub fn build(state: &State, live: &Live) -> View {
         marked: state.mark.is_some(),
         relaunch: live.relaunch,
         keep_spots: live.keep_spots,
+        auto_close: live.auto_close,
         monitors,
         tree,
     }
@@ -212,6 +215,7 @@ mod tests {
             submap: String::new(),
             relaunch: true,
             keep_spots: false,
+            auto_close: false,
         }
     }
 
